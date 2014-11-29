@@ -19,7 +19,10 @@ use yii\db\ActiveRecord;
  * This behavior makes it easy to maintain
  * relations many-to-many in ActiveRecord model.
  *
- * Example:
+ * Usage:
+ * 1. Add new attributes for usage in ActiveForm
+ * 2. Add new validation rule for new attributes
+ * 3. Add config behavior in your model and set array relations
  * ```
  * // This attributes usage in form
  * public $users_list = array();
