@@ -6,7 +6,7 @@
  * Time: 21:00
  */
 
-namespace voskobovich;
+namespace voskobovich\behaviors;
 
 use Yii;
 use yii\base\ErrorException;
