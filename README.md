@@ -62,13 +62,13 @@ The preferred way to install this extension is through [composer](http://getcomp
 Either run
 
 ```
-php composer.phar require --prefer-dist https://bitbucket.org/voskobovich/yii2-many-many-behavior "*"
+php composer.phar require --prefer-dist voskobovich/yii2-many-many-behavior "*"
 ```
 
 or add
 
 ```
-"https://bitbucket.org/voskobovich/yii2-many-many-behavior": "*"
+"voskobovich/yii2-many-many-behavior": "*"
 ```
 
 to the require section of your `composer.json` file.
