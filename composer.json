@@ -1,0 +1,22 @@
+{
+    "name": "voskobovich/yii2-many-many-behavior",
+    "description": "This behavior makes it easy to maintain relations many-to-many in the your ActiveRecord model.",
+    "keywords": ["behavior", "active record", "yii2", "many-to-many", "relation"],
+    "type": "yii2-behavior",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Vitaly Voskobovich",
+            "email": "vitaly@voskobovich.com",
+            "homepage": "http://voskobovich.com"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "voskobovich\\mtm\\": ""
+        }
+    }
+}
