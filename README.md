@@ -2,11 +2,13 @@ Yii2 many-to-many behavior
 ===================
 This behavior makes it easy to maintain relations many-to-many in your ActiveRecord model.
 
-Usage:  
+Usage:
+------------
 1. Add new attributes for usage in ActiveForm  
 2. Add new validation rule for new attributes  
 3. Add config behavior in your model and set array relations
-------------
+
+Example code:
 ```php
 <?php
 
