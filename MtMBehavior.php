@@ -31,7 +31,7 @@ use yii\db\ActiveRecord;
  * public function rules()
  * {
  *     return [
- *         [['users_list', 'users_list'], 'safe']
+ *         [['users_list', 'tasks_list'], 'safe']
  *     ];
  * }
  *
@@ -39,7 +39,7 @@ use yii\db\ActiveRecord;
  * {
  *     return [
  *         [
- *             'class' => \voskobovich\mtm\MtMBehavior::className(),
+ *             'class' => \voskobovich\behaviors\MtMBehavior::className(),
  *             'relations' => [
  *                 'users' => 'users_list',
  *                 'tasks' => [

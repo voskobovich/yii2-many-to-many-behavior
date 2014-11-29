@@ -19,7 +19,7 @@ public $tasks_list = array();
 public function rules()
 {
     return [
-        [['users_list', 'users_list'], 'safe']
+        [['users_list', 'tasks_list'], 'safe']
     ];
 }
 
@@ -27,7 +27,7 @@ public function behaviors()
 {
     return [
         [
-            'class' => \voskobovich\mtm\MtMBehavior::className(),
+            'class' => \voskobovich\behaviors\MtMBehavior::className(),
             'relations' => [
                 'users' => 'users_list',
                 'tasks' => [
