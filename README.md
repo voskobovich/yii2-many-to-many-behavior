@@ -7,7 +7,7 @@ Usage:
 2. Add new validation rule for new attributes
 3. Add config behavior in your model and set array relations
 ------------
-```
+```[php]
 // These attributes are used in the ActiveForm
 public $users_list = array();
 public $tasks_list = array();
