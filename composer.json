@@ -5,6 +5,10 @@
     "homepage": "https://bitbucket.org/voskobovich/yii2-many-many-behavior",
     "type": "yii2-behavior",
     "license": "MIT",
+    "support": {
+        "issues": "https://bitbucket.org/voskobovich/yii2-many-many-behavior/issues",
+        "source": "https://bitbucket.org/voskobovich/yii2-many-many-behavior"
+    },
     "authors": [
         {
             "name": "Vitaly Voskobovich",
