@@ -23,7 +23,7 @@ use yii\db\ActiveRecord;
  * 1. Add new attributes for usage in ActiveForm
  * 2. Add new validation rule for new attributes
  * 3. Add config behavior in your model and set array relations
- * ```
+ *
  * // This attributes usage in form
  * public $users_list = array();
  * public $tasks_list = array();
@@ -64,7 +64,6 @@ use yii\db\ActiveRecord;
  *     return $this->hasMany(Task::className(), ['id' => 'user_id'])
  *         ->viaTable('{{%object_has_task}}', ['object_id' => 'id']);
  * }
- * ```
  */
 
 class MtMBehavior extends \yii\base\Behavior
