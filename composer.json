@@ -17,8 +17,8 @@
         "yiisoft/yii2": "*"
     },
     "autoload": {
-        "psr-0": {
-            "voskobovich\\behaviors\\": "voskobovich/yii2-many-many-behavior"
+        "psr-4": {
+            "voskobovich\\behaviors\\": ""
         }
     }
 }
