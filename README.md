@@ -4,17 +4,21 @@ This behavior makes it easy to maintain relations many-to-many in your ActiveRec
 
 Usage:
 ------------
-1. Add new attributes for usage in ActiveForm  
-2. Add new validation rule for new attributes  
-3. Add config behavior in your model and set array relations
+1. Add new validation rule for attributes  
+2. Add config behavior in your model and set array relations
+
+These attributes are used in the ActiveForm.
+They are created automatically.
+$this->users_list;
+$this->$tasks_list;
+Example:
+<?= $form->field($model, 'users_list')
+    ->dropDownList($users, ['multiple' => true]) ?>
 
 Example code:
+
 ```php
 <?php
-
-// These attributes are used in the ActiveForm
-public $users_list = array();
-public $tasks_list = array();
 
 public function rules()
 {
@@ -29,12 +33,15 @@ public function behaviors()
         [
             'class' => \voskobovich\behaviors\MtMBehavior::className(),
             'relations' => [
-                'users' => 'users_list',
-                'tasks' => [
-                    'tasks_list',
-                    function($tasksList) {
-                        return array_rand($tasksList, 2);
-                    }
+                'users_list' => 'users',
+                'tasks_list' => [
+                    'tasks',
+                    'get' => function($value) {
+                        return JSON::decode($value);
+                    },
+                    'set' => function($value) {
+                        return JSON::encode($value);
+                    },
                 ]
             ],
         ],

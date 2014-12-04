@@ -9,8 +9,8 @@
 namespace voskobovich\behaviors;
 
 use Yii;
-use yii\base\ErrorException;
 use yii\db\ActiveRecord;
+use yii\base\ErrorException;
 
 /**
  * Class MtMBehavior
@@ -20,13 +20,16 @@ use yii\db\ActiveRecord;
  * relations many-to-many in ActiveRecord model.
  *
  * Usage:
- * 1. Add new attributes for usage in ActiveForm
- * 2. Add new validation rule for new attributes
- * 3. Add config behavior in your model and set array relations
+ * 1. Add new validation rule for new attributes
+ * 2. Add config behavior in your model and set array relations
  *
- * // This attributes usage in form
- * public $users_list = array();
- * public $tasks_list = array();
+ * These attributes are used in the ActiveForm.
+ * They are created automatically.
+ * $this->users_list;
+ * $this->$tasks_list;
+ * Example:
+ * <?= $form->field($model, 'users_list')
+ *      ->dropDownList($users, ['multiple' => true]) ?>
  *
  * public function rules()
  * {
@@ -41,11 +44,14 @@ use yii\db\ActiveRecord;
  *         [
  *             'class' => \voskobovich\behaviors\MtMBehavior::className(),
  *             'relations' => [
- *                 'users' => 'users_list',
- *                 'tasks' => [
- *                     'tasks_list',
- *                     function($tasksList) {
- *                         return array_rand($tasksList, 2);
+ *                 'users_list' => 'users',
+ *                 'tasks_list' => [
+ *                     'tasks',
+ *                     'set' => function($tasksList) {
+ *                         return JSON::decode($tasksList);
+ *                     },
+ *                     'get' => function($value) {
+ *                         return JSON::encode($value);
  *                     }
  *                 ]
  *             ],
@@ -75,6 +81,12 @@ class MtMBehavior extends \yii\base\Behavior
     public $relations = array();
 
     /**
+     * Relations value
+     * @var array
+     */
+    private $_values = array();
+
+    /**
      * Events list
      * @return array
      */
@@ -83,34 +95,7 @@ class MtMBehavior extends \yii\base\Behavior
         return [
             ActiveRecord::EVENT_AFTER_INSERT => 'saveRelations',
             ActiveRecord::EVENT_AFTER_UPDATE => 'saveRelations',
-            ActiveRecord::EVENT_AFTER_FIND   => 'loadRelations'
         ];
-    }
-
-    /**
-     * Load relation data from model attributes
-     * @param $event
-     */
-    public function loadRelations($event)
-    {
-        $component = $event->sender;
-        list($primaryKey) = $component::primaryKey();
-
-        foreach($this->relations as $relationName => $source)
-        {
-            if(is_array($source))
-                list($attributeName) = $source;
-            else
-                $attributeName = $source;
-
-            $relation = $component->getRelation($relationName);
-
-            if(!is_null($relation))
-            {
-                $relatedModels = $relation->indexBy($primaryKey)->all();
-                $component->{$attributeName} = array_keys($relatedModels);
-            }
-        }
     }
 
     /**
@@ -121,69 +106,203 @@ class MtMBehavior extends \yii\base\Behavior
      */
     public function saveRelations($event)
     {
-        $component = $event->sender;
-        $safeAttributes = $component->safeAttributes();
+        $model = $event->sender;
+        $modelPk = $model->getPrimaryKey();
 
-        foreach($this->relations as $relationName => $source)
-        {
-            if(array_search($relationName, $safeAttributes) === NULL)
-                throw new ErrorException("Relation \"{$relationName}\" must be safe attributes");
+        foreach ($this->relations as $attributeName => $params) {
 
-            if(is_array($component->getPrimaryKey()))
+            if (!$model->isAttributeSafe($attributeName)) {
+                throw new ErrorException("Attribute \"{$attributeName}\" must be safe");
+            }
+
+            if (is_array($modelPk)) {
                 throw new ErrorException("This behavior not supported composite primary key");
+            }
 
-            $relation = $component->getRelation($relationName);
+            $relationName = $this->getRelationName($attributeName);
+            $relation = $model->getRelation($relationName);
 
-            if(empty($relation->via))
-                throw new ErrorException("Attribute \"{$relationName}\" is not relation");
+            if (empty($relation->via)) {
+                throw new ErrorException("This attribute \"{$relationName}\" is not Many-to-Many relation");
+            }
 
             list($junctionTable) = array_values($relation->via->from);
             list($relatedColumn) = array_values($relation->link);
             list($junctionColumn) = array_keys($relation->via->link);
 
-            // Get relation keys of attribute name
-            if(is_string($source) && isset($component->{$source}))
-                $relatedPkCollection = $component->{$source};
-            elseif(is_array($source))
-            {
-                list($attributeName, $callback) = $source;
+            $newValue = $this->getNewValue($attributeName);
 
-                if(isset($component->{$attributeName})) {
-                    $relatedPkCollection = (array)call_user_func($callback, $component->{$attributeName});
-                    $component->{$attributeName} = $relatedPkCollection;
-                }
+            if (!empty($source['get'])) {
+                $relationKeys = (array)$this->getCallUserFunction($source['get'], $newValue);
+            } else {
+                $relationKeys = $newValue;
+            }
+
+            if (!is_array($relationKeys)) {
+                continue;
             }
 
             // Save relations data
-            if(!empty($relatedPkCollection))
-            {
-                $transaction = Yii::$app->db->beginTransaction();
-                try
-                {
-                    $connection = Yii::$app->db;
-                    $componentPk = $component->getPrimaryKey();
+            $transaction = Yii::$app->db->beginTransaction();
+            try {
+                $connection = Yii::$app->db;
 
-                    // Remove relations
-                    $connection->createCommand()
-                        ->delete($junctionTable, "{$junctionColumn} = :id", [':id' => $componentPk])
-                        ->execute();
+                // Remove relations
+                $connection->createCommand()
+                    ->delete($junctionTable, "{$junctionColumn} = :id", [':id' => $modelPk])
+                    ->execute();
 
-                    // Write new relations
-                    $junctionRows = array();
-                    foreach($relatedPkCollection as $relatedPk)
-                        array_push($junctionRows, [$componentPk, $relatedPk]);
-
-                    $connection->createCommand()
-                        ->batchInsert($junctionTable, [$junctionColumn, $relatedColumn], $junctionRows)
-                        ->execute();
-
-                    $transaction->commit();
+                // Write new relations
+                $junctionRows = array();
+                foreach ($relationKeys as $relatedPk) {
+                    array_push($junctionRows, [$modelPk, $relatedPk]);
                 }
-                catch(\yii\db\Exception $ex)
-                {
-                    $transaction->rollback();
-                }
+
+                $connection->createCommand()
+                    ->batchInsert($junctionTable, [$junctionColumn, $relatedColumn], $junctionRows)
+                    ->execute();
+
+                $transaction->commit();
+            } catch (\yii\db\Exception $ex) {
+                $transaction->rollback();
             }
         }
+    }
+
+    /**
+     * Call user function
+     * @param $function
+     * @param $value
+     * @return mixed
+     * @throws ErrorException
+     */
+    private function getCallUserFunction($function, $value)
+    {
+        if (!is_array($function) && !$function instanceof \Closure) {
+            throw new ErrorException("This value is not a function");
+        }
+
+        return call_user_func($function, $value);
+    }
+
+    /**
+     * Get relation new value
+     * @param $name
+     * @return null
+     */
+    private function getNewValue($name)
+    {
+        if (isset($this->_values[$name])) {
+            return $this->_values[$name];
+        }
+
+        return NULL;
+    }
+
+    /**
+     * Get params relation
+     * @param $attributeName
+     * @return mixed
+     * @throws ErrorException
+     */
+    private function getRelationParams($attributeName)
+    {
+        if (empty($this->relations[$attributeName])) {
+            throw new ErrorException("Item \"{$attributeName}\" must be configured");
+        }
+
+        return $this->relations[$attributeName];
+    }
+
+    /**
+     * Get source attribute name
+     * @param $attributeName
+     * @return null
+     */
+    private function getRelationName($attributeName)
+    {
+        $params = $this->getRelationParams($attributeName);
+
+        if (is_string($params)) {
+            return $params;
+        } elseif (is_array($params) && !empty($params[0])) {
+            return $params[0];
+        }
+
+        return NULL;
+    }
+
+    /**
+     * Returns a value indicating whether a property can be read.
+     *
+     * @param string $name the property name
+     * @param boolean $checkVars whether to treat member variables as properties
+     * @return boolean whether the property can be read
+     * @see canSetProperty()
+     */
+    public function canGetProperty($name, $checkVars = true)
+    {
+        foreach ($this->relations as $attributeName => $params) {
+            if ($attributeName === $name) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns a value indicating whether a property can be set.
+     *
+     * @param string $name the property name
+     * @param boolean $checkVars whether to treat member variables as properties
+     * @param boolean $checkBehaviors whether to treat behaviors' properties as properties of this component
+     * @return boolean whether the property can be written
+     * @see canGetProperty()
+     */
+    public function canSetProperty($name, $checkVars = true, $checkBehaviors = true)
+    {
+        foreach ($this->relations as $attributeName => $params) {
+            if ($attributeName === $name) {
+                return true;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns the value of an object property.
+     *
+     * @param string $name the property name
+     * @return mixed the property value
+     * @see __set()
+     */
+    public function __get($name)
+    {
+        $relationName = $this->getRelationName($name);
+        $relationParams = $this->getRelationParams($name);
+
+        $value = $this->owner
+            ->getRelation($relationName)
+            ->all();
+
+        if (!empty($relationParams['set'])) {
+            return $this->getCallUserFunction($relationParams['set'], $value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Sets the value of a component property.
+     *
+     * @param string $name the property name or the event name
+     * @param mixed $value the property value
+     * @see __get()
+     */
+    public function __set($name, $value)
+    {
+        $this->_values[$name] = $value;
     }
 }
