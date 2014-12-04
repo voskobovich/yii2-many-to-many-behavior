@@ -31,7 +31,7 @@ public function behaviors()
 {
     return [
         [
-            'class' => \voskobovich\behaviors\MtMBehavior::className(),
+            'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
             'relations' => [
                 'users_list' => 'users',
                 'tasks_list' => [

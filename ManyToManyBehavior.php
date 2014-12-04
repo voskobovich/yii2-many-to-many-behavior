@@ -13,7 +13,7 @@ use yii\db\ActiveRecord;
 use yii\base\ErrorException;
 
 /**
- * Class MtMBehavior
+ * Class ManyToManyBehavior
  * @package voskobovich\mtm
  *
  * This behavior makes it easy to maintain
@@ -42,7 +42,7 @@ use yii\base\ErrorException;
  * {
  *     return [
  *         [
- *             'class' => \voskobovich\behaviors\MtMBehavior::className(),
+ *             'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
  *             'relations' => [
  *                 'users_list' => 'users',
  *                 'tasks_list' => [
@@ -72,7 +72,7 @@ use yii\base\ErrorException;
  * }
  */
 
-class MtMBehavior extends \yii\base\Behavior
+class ManyToManyBehavior extends \yii\base\Behavior
 {
     /**
      * Relations list
@@ -133,7 +133,7 @@ class MtMBehavior extends \yii\base\Behavior
             $newValue = $this->getNewValue($attributeName);
 
             if (!empty($source['get'])) {
-                $relationKeys = (array)$this->getCallUserFunction($source['get'], $newValue);
+                $relationKeys = (array)$this->callUserFunction($source['get'], $newValue);
             } else {
                 $relationKeys = $newValue;
             }
@@ -176,7 +176,7 @@ class MtMBehavior extends \yii\base\Behavior
      * @return mixed
      * @throws ErrorException
      */
-    private function getCallUserFunction($function, $value)
+    private function callUserFunction($function, $value)
     {
         if (!is_array($function) && !$function instanceof \Closure) {
             throw new ErrorException("This value is not a function");
@@ -288,7 +288,7 @@ class MtMBehavior extends \yii\base\Behavior
             ->all();
 
         if (!empty($relationParams['set'])) {
-            return $this->getCallUserFunction($relationParams['set'], $value);
+            return $this->callUserFunction($relationParams['set'], $value);
         }
 
         return $value;
