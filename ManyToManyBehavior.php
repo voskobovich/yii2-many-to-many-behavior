@@ -133,7 +133,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
             $newValue = $this->getNewValue($attributeName);
 
             if (!empty($source['get'])) {
-                $relationKeys = (array)$this->callUserFunction($source['get'], $newValue);
+                $relationKeys = $this->callUserFunction($source['get'], $newValue);
             } else {
                 $relationKeys = $newValue;
             }
@@ -242,13 +242,8 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     public function canGetProperty($name, $checkVars = true)
     {
-        foreach ($this->relations as $attributeName => $params) {
-            if ($attributeName === $name) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_key_exists($name, $this->relations) ?
+            true : parent::canGetProperty($name, $checkVars);
     }
 
     /**
@@ -262,13 +257,8 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     public function canSetProperty($name, $checkVars = true, $checkBehaviors = true)
     {
-        foreach ($this->relations as $attributeName => $params) {
-            if ($attributeName === $name) {
-                return true;
-            }
-        }
-
-        return true;
+        return array_key_exists($name, $this->relations) ?
+            true : parent::canSetProperty($name, $checkVars, $checkBehaviors);
     }
 
     /**
