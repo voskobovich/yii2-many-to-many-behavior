@@ -2,6 +2,8 @@ Yii2 many-to-many behavior
 ===================
 This behavior makes it easy to maintain relations many-to-many in your ActiveRecord model.
 
+*Attention, behavior is under development, and not working yet!*
+
 Usage:
 ------------
 1. Add new validation rule for attributes  
@@ -9,11 +11,15 @@ Usage:
 
 These attributes are used in the ActiveForm.
 They are created automatically.
+```php
 $this->users_list;
-$this->$tasks_list;
+$this->tasks_list;
+```
 Example:
+```php
 <?= $form->field($model, 'users_list')
     ->dropDownList($users, ['multiple' => true]) ?>
+```
 
 Example code:
 
