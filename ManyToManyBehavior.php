@@ -130,8 +130,8 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
             $newValue = $this->getNewValue($attributeName);
 
-            if (!empty($source['get'])) {
-                $relationKeys = $this->callUserFunction($source['get'], $newValue);
+            if (!empty($params['get'])) {
+                $relationKeys = $this->callUserFunction($params['get'], $newValue);
             } else {
                 $relationKeys = $newValue;
             }
