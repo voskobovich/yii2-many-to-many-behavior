@@ -2,12 +2,12 @@
     "name": "voskobovich/yii2-many-many-behavior",
     "description": "This behavior makes it easy to maintain relations many-to-many in the your ActiveRecord model.",
     "keywords": ["behavior", "active record", "yii2", "many-to-many", "relation"],
-    "homepage": "https://bitbucket.org/voskobovich/yii2-many-many-behavior",
+    "homepage": "https://github.com/voskobovich/ManyToManyBehavior",
     "type": "yii2-behavior",
     "license": "MIT",
     "support": {
-        "issues": "https://bitbucket.org/voskobovich/yii2-many-many-behavior/issues",
-        "source": "https://bitbucket.org/voskobovich/yii2-many-many-behavior"
+        "issues": "https://github.com/voskobovich/ManyToManyBehavior/issues",
+        "source": "https://github.com/voskobovich/ManyToManyBehavior"
     },
     "authors": [
         {
