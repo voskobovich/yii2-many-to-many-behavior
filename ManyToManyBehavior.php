@@ -107,16 +107,14 @@ class ManyToManyBehavior extends \yii\base\Behavior
     public function saveRelations($event)
     {
         $model = $event->sender;
-        $modelPk = $model->getPrimaryKey();
+        if (is_array($modelPk = $model->getPrimaryKey())) {
+            throw new ErrorException("This behavior not supported composite primary key");
+        }
 
         foreach ($this->relations as $attributeName => $params) {
 
             if (!$model->isAttributeSafe($attributeName)) {
                 throw new ErrorException("Attribute \"{$attributeName}\" must be safe");
-            }
-
-            if (is_array($modelPk)) {
-                throw new ErrorException("This behavior not supported composite primary key");
             }
 
             $relationName = $this->getRelationName($attributeName);
@@ -132,8 +130,8 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
             $newValue = $this->getNewValue($attributeName);
 
-            if (!empty($source['get'])) {
-                $relationKeys = $this->callUserFunction($source['get'], $newValue);
+            if (!empty($params['get'])) {
+                $relationKeys = $this->callUserFunction($params['get'], $newValue);
             } else {
                 $relationKeys = $newValue;
             }
