@@ -1,4 +1,4 @@
-Yii2 many-to-many behavior
+Yii2 ManyToMany Behavior
 ===================
 This behavior makes it easy to maintain relations many-to-many in your ActiveRecord model.
 
