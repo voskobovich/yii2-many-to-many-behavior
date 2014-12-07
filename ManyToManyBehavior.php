@@ -151,14 +151,16 @@ class ManyToManyBehavior extends \yii\base\Behavior
                     ->execute();
 
                 // Write new relations
-                $junctionRows = array();
-                foreach ($relationKeys as $relatedPk) {
-                    array_push($junctionRows, [$modelPk, $relatedPk]);
-                }
+                if(!empty($relationKeys)) {
+                    $junctionRows = array();
+                    foreach ($relationKeys as $relatedPk) {
+                        array_push($junctionRows, [$modelPk, $relatedPk]);
+                    }
 
-                $connection->createCommand()
-                    ->batchInsert($junctionTable, [$junctionColumn, $relatedColumn], $junctionRows)
-                    ->execute();
+                    $connection->createCommand()
+                        ->batchInsert($junctionTable, [$junctionColumn, $relatedColumn], $junctionRows)
+                        ->execute();
+                }
 
                 $transaction->commit();
             } catch (\yii\db\Exception $ex) {
