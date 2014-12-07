@@ -26,7 +26,7 @@ use yii\base\ErrorException;
  * These attributes are used in the ActiveForm.
  * They are created automatically.
  * $this->users_list;
- * $this->$tasks_list;
+ * $this->tasks_list;
  * Example:
  * <?= $form->field($model, 'users_list')
  *      ->dropDownList($users, ['multiple' => true]) ?>
@@ -106,38 +106,30 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     public function saveRelations($event)
     {
-        $model = $event->sender;
-        if (is_array($modelPk = $model->getPrimaryKey())) {
+        $primaryModel = $event->sender;
+
+        if (is_array($primaryModelPk = $primaryModel->getPrimaryKey())) {
             throw new ErrorException("This behavior not supported composite primary key");
         }
 
         foreach ($this->relations as $attributeName => $params) {
 
-            if (!$model->isAttributeSafe($attributeName)) {
+            $newValue = $this->getNewValue($attributeName);
+            if (empty($newValue)) {
+                continue;
+            }
+
+            if (!$primaryModel->isAttributeSafe($attributeName)) {
                 throw new ErrorException("Attribute \"{$attributeName}\" must be safe");
             }
 
             $relationName = $this->getRelationName($attributeName);
-            $relation = $model->getRelation($relationName);
-
-            if (empty($relation->via)) {
-                throw new ErrorException("This attribute \"{$relationName}\" is not Many-to-Many relation");
-            }
-
-            list($junctionTable) = array_values($relation->via->from);
-            list($relatedColumn) = array_values($relation->link);
-            list($junctionColumn) = array_keys($relation->via->link);
-
-            $newValue = $this->getNewValue($attributeName);
+            $relation = $primaryModel->getRelation($relationName);
 
             if (!empty($params['get'])) {
-                $relationKeys = $this->callUserFunction($params['get'], $newValue);
+                $bindingKeys = $this->callUserFunction($params['get'], $newValue);
             } else {
-                $relationKeys = $newValue;
-            }
-
-            if (!is_array($relationKeys)) {
-                continue;
+                $bindingKeys = $newValue;
             }
 
             // Save relations data
@@ -145,24 +137,84 @@ class ManyToManyBehavior extends \yii\base\Behavior
             try {
                 $connection = Yii::$app->db;
 
-                // Remove relations
-                $connection->createCommand()
-                    ->delete($junctionTable, "{$junctionColumn} = :id", [':id' => $modelPk])
-                    ->execute();
+                // Many To Many
+                if (!empty($relation->via)) {
 
-                // Write new relations
-                if(!empty($relationKeys)) {
-                    $junctionRows = array();
-                    foreach ($relationKeys as $relatedPk) {
-                        array_push($junctionRows, [$modelPk, $relatedPk]);
+                    list($junctionTable) = array_values($relation->via->from);
+                    list($junctionColumn) = array_keys($relation->via->link);
+                    list($relatedColumn) = array_values($relation->link);
+
+                    // Remove relations
+                    $connection->createCommand()
+                        ->delete($junctionTable, "{$junctionColumn} = :id", [':id' => $primaryModelPk])
+                        ->execute();
+
+                    // Write new relations
+                    if (!empty($bindingKeys)) {
+                        $junctionRows = array();
+                        foreach ($bindingKeys as $relatedPk) {
+                            array_push($junctionRows, [$primaryModelPk, $relatedPk]);
+                        }
+
+                        $connection->createCommand()
+                            ->batchInsert($junctionTable, [$junctionColumn, $relatedColumn], $junctionRows)
+                            ->execute();
+                    }
+                }
+
+                // Has Many or Has One
+                elseif (!empty($relation->link)) {
+
+                    $foreignModel = new $relation->modelClass();
+
+                    list($bindingColumn) = array_keys($relation->link);
+                    list($relatedColumn) = array_values($relation->link);
+
+                    $p1 = $primaryModel->isPrimaryKey(array_values($relation->link));
+                    $p2 = $foreignModel->isPrimaryKey(array_keys($relation->link));
+
+                    // ???
+                    if ($p1 && $p2) {
+                        // https://github.com/yiisoft/yii2/blob/master/framework/db/BaseActiveRecord.php#L1196
                     }
 
-                    $connection->createCommand()
-                        ->batchInsert($junctionTable, [$junctionColumn, $relatedColumn], $junctionRows)
-                        ->execute();
+                    // Has Many
+                    elseif ($p1) {
+                        $relatedTableName = $foreignModel::className();
+
+                        // Unlink current relations
+                        $connection->createCommand()
+                            ->update($relatedTableName, [$bindingColumn => 0], [$bindingColumn => $primaryModelPk])
+                            ->execute();
+
+                        // Link new items
+                        if (!empty($bindingKeys)) {
+                            $connection->createCommand()
+                                ->update($relatedTableName, [$bindingColumn => $primaryModelPk], ['in', $relatedColumn, $bindingKeys])
+                                ->execute();
+                        }
+                    }
+
+                    // Has One
+                    elseif ($p2) {
+                        $relatedTableName = $primaryModel::className();
+
+                        // Unlink current relations
+                        $connection->createCommand()
+                            ->update($relatedTableName, [$relatedColumn => 0], [$bindingColumn => $primaryModelPk])
+                            ->execute();
+
+                        // Link new items
+                        if (!empty($bindingKeys)) {
+                            $connection->createCommand()
+                                ->update($relatedTableName, [$relatedColumn => $bindingKeys[0]], [$bindingColumn => $primaryModelPk])
+                                ->execute();
+                        }
+                    }
                 }
 
                 $transaction->commit();
+
             } catch (\yii\db\Exception $ex) {
                 $transaction->rollback();
             }
@@ -192,11 +244,21 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     private function getNewValue($name)
     {
-        if (isset($this->_values[$name])) {
+        if ($this->hasNewValue($name)) {
             return $this->_values[$name];
         }
 
         return NULL;
+    }
+
+    /**
+     * Check has new value
+     * @param $name
+     * @return null
+     */
+    private function hasNewValue($name)
+    {
+        return isset($this->_values[$name]);
     }
 
     /**
@@ -273,9 +335,8 @@ class ManyToManyBehavior extends \yii\base\Behavior
         $relationName = $this->getRelationName($name);
         $relationParams = $this->getRelationParams($name);
 
-        $value = $this->owner
-            ->getRelation($relationName)
-            ->all();
+        $value = $this->hasNewValue($name) ?
+            $this->getNewValue($name) : $this->owner->getRelation($relationName)->all();
 
         if (!empty($relationParams['set'])) {
             return $this->callUserFunction($relationParams['set'], $value);
