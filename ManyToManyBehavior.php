@@ -114,17 +114,14 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
         foreach ($this->relations as $attributeName => $params) {
 
-            $newValue = $this->getNewValue($attributeName);
-            if (empty($newValue)) {
-                continue;
-            }
-
             if (!$primaryModel->isAttributeSafe($attributeName)) {
-                throw new ErrorException("Attribute \"{$attributeName}\" must be safe");
+                continue;
             }
 
             $relationName = $this->getRelationName($attributeName);
             $relation = $primaryModel->getRelation($relationName);
+
+            $newValue = $this->getNewValue($attributeName);
 
             if (!empty($params['get'])) {
                 $bindingKeys = $this->callUserFunction($params['get'], $newValue);
@@ -248,7 +245,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
             return $this->_values[$name];
         }
 
-        return NULL;
+        return array();
     }
 
     /**
