@@ -106,6 +106,9 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     public function saveRelations($event)
     {
+        /**
+         * @var $model \yii\db\ActiveRecord
+         */
         $model = $event->sender;
         if (is_array($modelPk = $model->getPrimaryKey())) {
             throw new ErrorException("This behavior not supported composite primary key");
@@ -137,7 +140,9 @@ class ManyToManyBehavior extends \yii\base\Behavior
             }
 
             // Save relations data
-            $transaction = Yii::$app->db->beginTransaction();
+            $connection = $model::getDb();
+
+            $transaction = $connection->beginTransaction();
             try {
                 $connection = Yii::$app->db;
 
