@@ -106,6 +106,9 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     public function saveRelations($event)
     {
+        /**
+         * @var $model \yii\db\ActiveRecord
+         */
         $primaryModel = $event->sender;
 
         if (is_array($primaryModelPk = $primaryModel->getPrimaryKey())) {
@@ -130,7 +133,9 @@ class ManyToManyBehavior extends \yii\base\Behavior
             }
 
             // Save relations data
-            $transaction = Yii::$app->db->beginTransaction();
+            $connection = $model::getDb();
+
+            $transaction = $connection->beginTransaction();
             try {
                 $connection = Yii::$app->db;
 
