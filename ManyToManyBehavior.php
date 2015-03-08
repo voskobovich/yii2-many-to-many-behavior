@@ -11,6 +11,7 @@ namespace voskobovich\behaviors;
 use Yii;
 use yii\db\ActiveRecord;
 use yii\base\ErrorException;
+use yii\base\InvalidCallException;
 
 /**
  * Class ManyToManyBehavior
@@ -112,14 +113,10 @@ class ManyToManyBehavior extends \yii\base\Behavior
         $primaryModel = $event->sender;
 
         if (is_array($primaryModelPk = $primaryModel->getPrimaryKey())) {
-            throw new ErrorException("This behavior not supported composite primary key");
+            throw new ErrorException("This behavior does not support composite primary keys");
         }
 
         foreach ($this->relations as $attributeName => $params) {
-
-            if (!$primaryModel->isAttributeSafe($attributeName)) {
-                continue;
-            }
 
             $relationName = $this->getRelationName($attributeName);
             $relation = $primaryModel->getRelation($relationName);
@@ -177,7 +174,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
                     // ???
                     if ($p1 && $p2) {
-                        // https://github.com/yiisoft/yii2/blob/master/framework/db/BaseActiveRecord.php#L1196
+                        throw new InvalidCallException('Unable to link models: both models are newly created.');
                     }
 
                     // Has Many

@@ -1,13 +1,13 @@
 Yii2 ManyToMany Behavior
 ===================
-This behavior makes it easy to maintain relations many-to-many in your ActiveRecord model.
+This behavior makes it easy to maintain many-to-many and one-to-many relations in your ActiveRecord models.
 
 *Attention, behavior is under development, and not working yet!*
 
 Usage:
 ------------
-1. Add new validation rule for attributes  
-2. Add config behavior in your model and set array relations
+1. Add the behavior to your model and configure it
+2. Add validation rules for the attributes created by the behavior   
 
 These attributes are used in the ActiveForm.
 They are created automatically.
