@@ -130,11 +130,10 @@ class ManyToManyBehavior extends \yii\base\Behavior
             }
 
             // Save relations data
-            $connection = $model::getDb();
+            $connection = $primaryModel::getDb();
 
             $transaction = $connection->beginTransaction();
             try {
-                $connection = Yii::$app->db;
 
                 // Many To Many
                 if (!empty($relation->via)) {
@@ -179,7 +178,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
                     // Has Many
                     elseif ($p1) {
-                        $relatedTableName = $foreignModel::className();
+                        $relatedTableName = $foreignModel::tableName();
 
                         // Unlink current relations
                         $connection->createCommand()
@@ -196,7 +195,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
                     // Has One
                     elseif ($p2) {
-                        $relatedTableName = $primaryModel::className();
+                        $relatedTableName = $primaryModel::tableName();
 
                         // Unlink current relations
                         $connection->createCommand()
