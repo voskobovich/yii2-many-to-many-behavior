@@ -81,7 +81,7 @@ class OneToManyTest extends TestCase
         //update categories
         $post = [
             'Image' => [
-            	'products_list' => 0
+            	'products_list' => ''
             ]
         ];
 

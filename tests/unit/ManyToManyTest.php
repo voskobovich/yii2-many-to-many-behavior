@@ -49,6 +49,9 @@ class ManyToManyTest extends TestCase
         //id=4, 'M4x60, allen'
         $product = Product::find()->andWhere(['id' => 4])->one();
 
+        print_r($product->categories_list);
+        die;
+
         //update categories
         $post = [
             'Product' => []
@@ -82,7 +85,7 @@ class ManyToManyTest extends TestCase
         //update categories
         $post = [
             'Product' => [
-                'category_list' => 0,
+                'categories_list' => '',
             ]
         ];
 

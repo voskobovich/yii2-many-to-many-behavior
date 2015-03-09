@@ -1,20 +1,21 @@
+CREATE TABLE IF NOT EXISTS `tbl` (
+  `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL ,
+  `name` varchar(255) NOT NULL);
+
 CREATE TABLE IF NOT EXISTS `category` (
-  `id` int(11) NOT NULL,
-  `name` varchar(50) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  `name` varchar(50) DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS `image` (
-  `id` int(11) NOT NULL,
-  `name` varchar(50) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `id`  INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  `name` varchar(50) DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS `product` (
-  `id` int(11) NOT NULL,
+  `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `name` varchar(50) DEFAULT NULL,
-  `image_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `image_id` int(11) DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS `product_has_category` (
