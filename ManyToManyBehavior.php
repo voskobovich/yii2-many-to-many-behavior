@@ -274,12 +274,16 @@ class ManyToManyBehavior extends \yii\base\Behavior
         $relationName = $this->getRelationName($name);
         $relationParams = $this->getRelationParams($name);
 
-        $value = $this->owner
-            ->getRelation($relationName)
-            ->all();
+        if (isset($this->_values[$name])) {
+            $value = $this->_values[$name];
+        } else {
+            $value = $this->owner
+                ->getRelation($relationName)
+                ->all();
 
-        if (!empty($relationParams['set'])) {
-            return $this->callUserFunction($relationParams['set'], $value);
+            if (!empty($relationParams['set'])) {
+                return $this->callUserFunction($relationParams['set'], $value);
+            }
         }
 
         return $value;
