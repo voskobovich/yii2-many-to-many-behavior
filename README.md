@@ -11,19 +11,19 @@ Usage
 3. In your view, create form fields for the attributes
 
 Adding and configuring the behavior
------------------------------------ 
+-----------------------------------
 
-As an example, let's assume you are dealing with entities like `Product`, `Category` and `Image`. The `Product` model has the following relationships:
+As an example, let's assume you are dealing with entities like `Book`, `Author` and `Review`. The `Book` model has the following relationships:
 ```php
-public function getCategories()
+public function getAuthors()
 {
-    return $this->hasMany(Category::className(), ['id' => 'category_id'])
-                ->viaTable('product_has_category', ['product_id' => 'id']);
+    return $this->hasMany(Author::className(), ['id' => 'author_id'])
+                ->viaTable('book_has_authors', ['book_id' => 'id']);
 }
 
-public function getImages()
+public function getReviews()
 {
-    return $this->hasMany(Image::className(), ['id' => 'image_id']);
+    return $this->hasMany(Review::className(), ['id' => 'review_id']);
 }
 ```
 In the same model, the behaviour can be configured like so:
@@ -34,18 +34,18 @@ public function behaviors()
         [
             'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
             'relations' => [
-                'category_list' => 'categories',
-				'image_list' => 'images',
+                'author_list' => 'authors',
+				'review_list' => 'reviews',
             ],
         ],
     ];
 }
 ```
-In this example, `category_list` and `image_list` attributes in the `Product` model are created automatically. By default, they are configured to accept data from a standard select input (see below). However, it is possible to use custom getter and setter functions, which may be useful for interaction with more complex frontend scripts:
+In this example, `author_list` and `review_list` attributes in the `Book` model are created automatically. By default, they are configured to accept data from a standard select input (see below). However, it is possible to use custom getter and setter functions, which may be useful for interaction with more complex frontend scripts:
 ```php
 ...
-'category_list' => [
-    'categories',
+'author_list' => [
+    'authors',
     'get' => function($value) {
         return JSON::decode($value);
     },
@@ -64,7 +64,7 @@ The attributes are created automatically. However, you must supply a validation 
 public function rules()
 {
     return [
-        [['category_list', 'image_list'], 'safe']
+        [['author_list', 'review_list'], 'safe']
     ];
 }
 ```
@@ -74,18 +74,18 @@ Creating form fields
 
 By default, the behavior will accept data from a multiselect field:
 ```php
-<?= $form->field($model, 'category_list')
-    ->dropDownList($categories_as_array, ['multiple' => true]) ?>
+<?= $form->field($model, 'author_list')
+    ->dropDownList($authors_as_array, ['multiple' => true]) ?>
 ...
-<?= $form->field($model, 'image_list')
-    ->dropDownList($images_as_array, ['multiple' => true]) ?>
+<?= $form->field($model, 'review_list')
+    ->dropDownList($reviews_as_array, ['multiple' => true]) ?>
 ```
 
 Known issues
 ------------
 
 * Composite primary keys are not supported
-* In the one-to-many relationship (`hasMany` with no `via`), old links are removed by setting the corresponding foreign-key column to `NULL`. The database must support this (the column needs to be NULLable).  
+* In the one-to-many relationship (`hasMany` with no `via`), old links are removed by setting the corresponding foreign-key column to `NULL`. The database must support this (the column needs to be NULLable).
 
 
 Installation
