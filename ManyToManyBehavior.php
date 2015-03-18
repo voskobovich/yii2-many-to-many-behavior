@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Vitaly Voskobovich
- * Date: 27.11.14
- * Time: 21:00
- */
 
 namespace voskobovich\behaviors;
 
@@ -17,7 +11,6 @@ use yii\base\ErrorException;
  * @package voskobovich\mtm
  *
  * See README.md for examples
- *
  */
 
 class ManyToManyBehavior extends \yii\base\Behavior
