@@ -23,7 +23,9 @@ class Image extends \yii\db\ActiveRecord
             [
                 'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
                 'relations' => [
-                    'products_list' => 'products',
+                    'products_list' => [
+                        'products',
+                    ],
                 ],
             ]
         ];
@@ -31,7 +33,7 @@ class Image extends \yii\db\ActiveRecord
 
     public function getProducts()
     {
-        return $this->hasMany(Product::className(), ['image_id' => 'id']);
+        return $this->hasMany(Product::className(), ['image_id' => 'id_img']);
     }
 
 }

@@ -15,7 +15,7 @@ class OneToManyTest extends TestCase
     public function testSave()
     {
         //id=4, 'M4 bolt generic'
-        $image = Image::find()->andWhere(['id' => 4])->one();
+        $image = Image::find()->andWhere(['id_img' => 4])->one();
 
         //update categories
         $post = [
@@ -28,7 +28,7 @@ class OneToManyTest extends TestCase
         $this->assertTrue($image->save(), 'Save model');
 
         //reload
-        $image = Image::find()->andWhere(['id' => 4])->one();
+        $image = Image::find()->andWhere(['id_img' => 4])->one();
 
         //must have three products
         $this->assertEquals(3, count($image->products), 'Product count after save');
@@ -36,7 +36,7 @@ class OneToManyTest extends TestCase
         //products must be 4, 5, 6
         $ids = [];
         foreach ($image->products as $product) {
-            $ids[$product->id] = 1;
+            $ids[$product->id_prod] = 1;
         }
 
         $this->assertTrue(isset($ids[4]), 'Saved product exists');
@@ -47,7 +47,7 @@ class OneToManyTest extends TestCase
     public function testSaveDoNothing()
     {
         //id=6, 'M8 bolt generic'
-        $image = Image::find()->andWhere(['id' => 6])->one();
+        $image = Image::find()->andWhere(['id_img' => 6])->one();
 
         //update categories
         $post = [
@@ -58,7 +58,7 @@ class OneToManyTest extends TestCase
         $this->assertTrue($image->save(), 'Save model');
 
         //reload
-        $image = Image::find()->andWhere(['id' => 6])->one();
+        $image = Image::find()->andWhere(['id_img' => 6])->one();
 
         //must have two products
         $this->assertEquals(2, count($image->products), 'Product count after save');
@@ -66,7 +66,7 @@ class OneToManyTest extends TestCase
         //products must be 9 and 10
         $ids = [];
         foreach ($image->products as $product) {
-            $ids[$product->id] = 1;
+            $ids[$product->id_prod] = 1;
         }
 
         $this->assertTrue(isset($ids[9]), 'Saved product exists');
@@ -76,7 +76,7 @@ class OneToManyTest extends TestCase
     public function testSaveClear()
     {
         //id=6, 'M8 bolt generic'
-        $image = Image::find()->andWhere(['id' => 6])->one();
+        $image = Image::find()->andWhere(['id_img' => 6])->one();
 
         //update categories
         $post = [
@@ -89,7 +89,7 @@ class OneToManyTest extends TestCase
         $this->assertTrue($image->save(), 'Save model');
 
         //reload
-        $image = Image::find()->andWhere(['id' => 6])->one();
+        $image = Image::find()->andWhere(['id_img' => 6])->one();
 
         //must have no products
         $this->assertEquals(0, count($image->products), 'Product count after save');

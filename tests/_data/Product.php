@@ -23,21 +23,23 @@ class Product extends \yii\db\ActiveRecord
             [
                 'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
                 'relations' => [
-                    'categories_list' => 'categories',
-                ],
+                    'categories_list' => [
+                        'categories',
+                    ],
+                ]
             ]
         ];
     }
 
     public function getCategories()
     {
-        return $this->hasMany(Category::className(), ['id' => 'category_id'])
-                    ->viaTable('product_has_category', ['product_id' => 'id']);
+        return $this->hasMany(Category::className(), ['id_cat' => 'category_id'])
+                    ->viaTable('product_has_category', ['product_id' => 'id_prod']);
     }
 
     public function getImage()
     {
-        return $this->hasOne(Image::className(), ['id' => 'image_id']);
+        return $this->hasOne(Image::className(), ['id_img' => 'image_id']);
     }
 
 }

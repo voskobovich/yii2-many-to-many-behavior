@@ -15,7 +15,7 @@ class ManyToManyTest extends TestCase
     public function testSave()
     {
         //id=2, 'M6x20, allen'
-        $product = Product::find()->andWhere(['id' => 2])->one();
+        $product = Product::find()->andWhere(['id_prod' => 2])->one();
 
         //update categories
         $post = [
@@ -28,7 +28,7 @@ class ManyToManyTest extends TestCase
         $this->assertTrue($product->save(), 'Save model');
 
         //reload
-        $product = Product::find()->andWhere(['id' => 2])->one();
+        $product = Product::find()->andWhere(['id_prod' => 2])->one();
 
         //must have three categories
         $this->assertEquals(3, count($product->categories), 'Category count after save');
@@ -36,7 +36,7 @@ class ManyToManyTest extends TestCase
         //categories must be 2, 5, 6
         $ids = [];
         foreach ($product->categories as $category) {
-            $ids[$category->id] = 1;
+            $ids[$category->id_cat] = 1;
         }
 
         $this->assertTrue(isset($ids[2]), 'Saved category exists');
@@ -47,10 +47,7 @@ class ManyToManyTest extends TestCase
     public function testSaveDoNothing()
     {
         //id=4, 'M4x60, allen'
-        $product = Product::find()->andWhere(['id' => 4])->one();
-
-        print_r($product->categories_list);
-        die;
+        $product = Product::find()->andWhere(['id_prod' => 4])->one();
 
         //update categories
         $post = [
@@ -61,7 +58,7 @@ class ManyToManyTest extends TestCase
         $this->assertTrue($product->save(), 'Save model');
 
         //reload
-        $product = Product::find()->andWhere(['id' => 4])->one();
+        $product = Product::find()->andWhere(['id_prod' => 4])->one();
 
         //must have three categories
         $this->assertEquals(3, count($product->categories), 'Category count after save');
@@ -69,7 +66,7 @@ class ManyToManyTest extends TestCase
         //categories must be 1, 5, 6
         $ids = [];
         foreach ($product->categories as $category) {
-            $ids[$category->id] = 1;
+            $ids[$category->id_cat] = 1;
         }
 
         $this->assertTrue(isset($ids[1]), 'Saved category exists');
@@ -80,7 +77,7 @@ class ManyToManyTest extends TestCase
     public function testSaveClear()
     {
         //id=4, 'M4x60, allen'
-        $product = Product::find()->andWhere(['id' => 4])->one();
+        $product = Product::find()->andWhere(['id_prod' => 4])->one();
 
         //update categories
         $post = [
@@ -93,7 +90,7 @@ class ManyToManyTest extends TestCase
         $this->assertTrue($product->save(), 'Save model');
 
         //reload
-        $product = Product::find()->andWhere(['id' => 4])->one();
+        $product = Product::find()->andWhere(['id_prod' => 4])->one();
 
         //must have three categories
         $this->assertEquals(0, count($product->categories), 'Category count after save');

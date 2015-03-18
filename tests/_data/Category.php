@@ -23,7 +23,9 @@ class Category extends \yii\db\ActiveRecord
             [
                 'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
                 'relations' => [
-                    'products_list' => 'products',
+                    'products_list' => [
+                        'products',
+                    ]
                 ],
             ]
         ];
@@ -31,8 +33,8 @@ class Category extends \yii\db\ActiveRecord
 
     public function getProducts()
     {
-        return $this->hasMany(Product::className(), ['id' => 'product_id'])
-                    ->viaTable('product_has_category', ['category_id' => 'id']);
+        return $this->hasMany(Product::className(), ['id_prod' => 'product_id'])
+                    ->viaTable('product_has_category', ['category_id' => 'id_cat']);
     }
 
 }

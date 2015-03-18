@@ -11,66 +11,13 @@ namespace voskobovich\behaviors;
 use Yii;
 use yii\db\ActiveRecord;
 use yii\base\ErrorException;
-use yii\base\InvalidCallException;
 
 /**
  * Class ManyToManyBehavior
  * @package voskobovich\mtm
  *
- * This behavior makes it easy to maintain
- * relations many-to-many in ActiveRecord model.
+ * See README.md for examples
  *
- * Usage:
- * 1. Add new validation rule for new attributes
- * 2. Add config behavior in your model and set array relations
- *
- * These attributes are used in the ActiveForm.
- * They are created automatically.
- * $this->users_list;
- * $this->tasks_list;
- * Example:
- * <?= $form->field($model, 'users_list')
- *      ->dropDownList($users, ['multiple' => true]) ?>
- *
- * public function rules()
- * {
- *     return [
- *         [['users_list', 'tasks_list'], 'safe']
- *     ];
- * }
- *
- * public function behaviors()
- * {
- *     return [
- *         [
- *             'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
- *             'relations' => [
- *                 'users_list' => 'users',
- *                 'tasks_list' => [
- *                     'tasks',
- *                     'set' => function($tasksList) {
- *                         return JSON::decode($tasksList);
- *                     },
- *                     'get' => function($value) {
- *                         return JSON::encode($value);
- *                     }
- *                 ]
- *             ],
- *         ],
- *     ];
- * }
- *
- * public function getUsers()
- * {
- *     return $this->hasMany(User::className(), ['id' => 'user_id'])
- *         ->viaTable('{{%object_has_user}}', ['object_id' => 'id']);
- * }
- *
- * public function getTasks()
- * {
- *     return $this->hasMany(Task::className(), ['id' => 'user_id'])
- *         ->viaTable('{{%object_has_task}}', ['object_id' => 'id']);
- * }
  */
 
 class ManyToManyBehavior extends \yii\base\Behavior
@@ -108,7 +55,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
     public function saveRelations($event)
     {
         /**
-         * @var $model \yii\db\ActiveRecord
+         * @var $primaryModel \yii\db\ActiveRecord
          */
         $primaryModel = $event->sender;
 
@@ -120,6 +67,10 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
             $relationName = $this->getRelationName($attributeName);
             $relation = $primaryModel->getRelation($relationName);
+
+            if (!$this->hasNewValue($attributeName)) {
+                break;
+            }
 
             $newValue = $this->getNewValue($attributeName);
 
@@ -134,15 +85,14 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
             $transaction = $connection->beginTransaction();
             try {
-
-                // Many To Many
+                // Many To Many (N-N)
                 if (!empty($relation->via)) {
 
                     list($junctionTable) = array_values($relation->via->from);
                     list($junctionColumn) = array_keys($relation->via->link);
                     list($relatedColumn) = array_values($relation->link);
 
-                    // Remove relations
+                    // Remove old relations
                     $connection->createCommand()
                         ->delete($junctionTable, "{$junctionColumn} = :id", [':id' => $primaryModelPk])
                         ->execute();
@@ -158,57 +108,28 @@ class ManyToManyBehavior extends \yii\base\Behavior
                             ->batchInsert($junctionTable, [$junctionColumn, $relatedColumn], $junctionRows)
                             ->execute();
                     }
-                }
-
-                // Has Many or Has One
-                elseif (!empty($relation->link)) {
-
+                } elseif (!empty($relation->link) && $relation->multiple) {
+                    //HasMany, primary model HAS MANY foreign models, must update foreign model table
                     $foreignModel = new $relation->modelClass();
+                    $manyTable = $foreignModel->tableName();
+                    list($manyTableFkColumn) = array_keys($relation->link);
+                    $manyTableFkValue = $primaryModelPk;
+                    list($manyTablePkColumn) = ($foreignModel->primaryKey());
 
-                    list($bindingColumn) = array_keys($relation->link);
-                    list($relatedColumn) = array_values($relation->link);
+                    //remove all links
+                    $connection->createCommand()
+                        ->update($manyTable, [$manyTableFkColumn => null], [$manyTableFkColumn => $manyTableFkValue])
+                        ->execute();
 
-                    $p1 = $primaryModel->isPrimaryKey(array_values($relation->link));
-                    $p2 = $foreignModel->isPrimaryKey(array_keys($relation->link));
-
-                    // ???
-                    if ($p1 && $p2) {
-                        throw new InvalidCallException('Unable to link models: both models are newly created.');
-                    }
-
-                    // Has Many
-                    elseif ($p1) {
-                        $relatedTableName = $foreignModel::tableName();
-
-                        // Unlink current relations
+                    //add new links
+                    if (count($bindingKeys)) {
                         $connection->createCommand()
-                            ->update($relatedTableName, [$bindingColumn => 0], [$bindingColumn => $primaryModelPk])
+                            ->update($manyTable, [$manyTableFkColumn => $manyTableFkValue], ['in', $manyTablePkColumn, $bindingKeys])
                             ->execute();
-
-                        // Link new items
-                        if (!empty($bindingKeys)) {
-                            $connection->createCommand()
-                                ->update($relatedTableName, [$bindingColumn => $primaryModelPk], ['in', $relatedColumn, $bindingKeys])
-                                ->execute();
-                        }
                     }
 
-                    // Has One
-                    elseif ($p2) {
-                        $relatedTableName = $primaryModel::tableName();
-
-                        // Unlink current relations
-                        $connection->createCommand()
-                            ->update($relatedTableName, [$relatedColumn => 0], [$bindingColumn => $primaryModelPk])
-                            ->execute();
-
-                        // Link new items
-                        if (!empty($bindingKeys)) {
-                            $connection->createCommand()
-                                ->update($relatedTableName, [$relatedColumn => $bindingKeys[0]], [$bindingColumn => $primaryModelPk])
-                                ->execute();
-                        }
-                    }
+                } else {
+                    throw new ErrorException('Relationship type not supported.');
                 }
 
                 $transaction->commit();
@@ -242,11 +163,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     private function getNewValue($name)
     {
-        if ($this->hasNewValue($name)) {
-            return $this->_values[$name];
-        }
-
-        return array();
+        return $this->_values[$name];
     }
 
     /**
@@ -268,7 +185,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
     private function getRelationParams($attributeName)
     {
         if (empty($this->relations[$attributeName])) {
-            throw new ErrorException("Item \"{$attributeName}\" must be configured");
+            throw new ErrorException("Parameter \"{$attributeName}\" does not exist");
         }
 
         return $this->relations[$attributeName];
@@ -294,6 +211,9 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Returns a value indicating whether a property can be read.
+     * We return true if it is one of our properties and pass the
+     * params on to the parent class otherwise.
+     * TODO: Make it honor $checkVars ??
      *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
@@ -308,6 +228,9 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Returns a value indicating whether a property can be set.
+     * We return true if it is one of our properties and pass the
+     * params on to the parent class otherwise.
+     * TODO: Make it honor $checkVars and $checkBehaviors ??
      *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
@@ -323,6 +246,8 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Returns the value of an object property.
+     * Get it from our local temporary variable if we have it,
+     * get if from DB otherwise.
      *
      * @param string $name the property name
      * @return mixed the property value
@@ -333,8 +258,13 @@ class ManyToManyBehavior extends \yii\base\Behavior
         $relationName = $this->getRelationName($name);
         $relationParams = $this->getRelationParams($name);
 
-        $value = $this->hasNewValue($name) ?
-            $this->getNewValue($name) : $this->owner->getRelation($relationName)->all();
+        if ($this->hasNewValue($name)) {
+            $value = $this->getNewValue($name);
+        } else {
+            $relation = $this->owner->getRelation($relationName);
+            $foreignModel = new $relation->modelClass();
+            $value = $relation->select($foreignModel->getPrimaryKey())->column();
+        }
 
         if (!empty($relationParams['set'])) {
             return $this->callUserFunction($relationParams['set'], $value);
@@ -345,6 +275,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Sets the value of a component property.
+     * Put it in our temporary variable.
      *
      * @param string $name the property name or the event name
      * @param mixed $value the property value

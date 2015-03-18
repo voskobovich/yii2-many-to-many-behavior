@@ -1,19 +1,15 @@
-CREATE TABLE IF NOT EXISTS `tbl` (
-  `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL ,
-  `name` varchar(255) NOT NULL);
-
 CREATE TABLE IF NOT EXISTS `category` (
-  `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  `id_cat` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `name` varchar(50) DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS `image` (
-  `id`  INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  `id_img`  INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `name` varchar(50) DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS `product` (
-  `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  `id_prod` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `name` varchar(50) DEFAULT NULL,
   `image_id` int(11) DEFAULT NULL
 );
@@ -24,7 +20,7 @@ CREATE TABLE IF NOT EXISTS `product_has_category` (
   PRIMARY KEY (`product_id`,`category_id`)
 );
 
-INSERT INTO `category` (`id`, `name`) VALUES
+INSERT INTO `category` (`id_cat`, `name`) VALUES
   (1, 'M4 fasteners'),
   (2, 'M6 fasteners'),
   (3, 'M8 fasteners'),
@@ -32,7 +28,7 @@ INSERT INTO `category` (`id`, `name`) VALUES
   (5, 'Bolts'),
   (6, 'Allen fasteners');
 
-INSERT INTO `image` (`id`, `name`) VALUES
+INSERT INTO `image` (`id_img`, `name`) VALUES
   (1, 'M4 nut'),
   (2, 'M6 nut'),
   (3, 'M8 nut'),
@@ -40,7 +36,7 @@ INSERT INTO `image` (`id`, `name`) VALUES
   (5, 'M6 bolt generic'),
   (6, 'M8 bolt generic');
 
-INSERT INTO `product` (`id`, `name`, `image_id`) VALUES
+INSERT INTO `product` (`id_prod`, `name`, `image_id`) VALUES
   (1, 'M6x20, hex', 5),
   (2, 'M6x20, allen', 5),
   (3, 'M4x60, philips countersunk', 4),
