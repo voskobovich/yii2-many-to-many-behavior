@@ -18,7 +18,7 @@ As an example, let's assume you are dealing with entities like `Book`, `Author` 
 public function getAuthors()
 {
     return $this->hasMany(Author::className(), ['id' => 'author_id'])
-                ->viaTable('book_has_authors', ['book_id' => 'id']);
+                ->viaTable('book_has_author', ['book_id' => 'id']);
 }
 
 public function getReviews()
@@ -81,11 +81,12 @@ By default, the behavior will accept data from a multiselect field:
     ->dropDownList($reviews_as_array, ['multiple' => true]) ?>
 ```
 
-Known issues
-------------
+Known issues and limitations
+----------------------------
 
 * Composite primary keys are not supported
-* In the one-to-many relationship (`hasMany` with no `via`), old links are removed by setting the corresponding foreign-key column to `NULL`. The database must support this (the column needs to be NULLable).
+* Junction table for many-to-many links are updated using the connection from the primary model
+* In the one-to-many relationship (on the `hasMany` side), old links are removed by setting the corresponding foreign-key column to `NULL`. The database must support this (the column needs to be NULLable).
 
 
 Installation

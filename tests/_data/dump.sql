@@ -1,63 +1,47 @@
-CREATE TABLE IF NOT EXISTS `category` (
-  `id_cat` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  `name` varchar(50) DEFAULT NULL
+BEGIN TRANSACTION;
+CREATE TABLE "review" (
+	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	`book_id`	INTEGER,
+	`comment`	VARCHAR(150) NOT NULL,
+	`rating`	INTEGER NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS `image` (
-  `id_img`  INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  `name` varchar(50) DEFAULT NULL
+INSERT INTO `review` VALUES (1,3,'Старая книга, не потерявшая актуальность.',5);
+INSERT INTO `review` VALUES (2,3,'Одобряю!',5);
+INSERT INTO `review` VALUES (3,3,'Неплохо.',4);
+INSERT INTO `review` VALUES (4,5,'Хлам!',2);
+CREATE TABLE "book_has_author" (
+	`book_id`	INTEGER NOT NULL,
+	`author_id`	INTEGER NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS `product` (
-  `id_prod` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  `name` varchar(50) DEFAULT NULL,
-  `image_id` int(11) DEFAULT NULL
+INSERT INTO `book_has_author` VALUES (1,1);
+INSERT INTO `book_has_author` VALUES (1,2);
+INSERT INTO `book_has_author` VALUES (2,1);
+INSERT INTO `book_has_author` VALUES (2,3);
+INSERT INTO `book_has_author` VALUES (3,4);
+INSERT INTO `book_has_author` VALUES (4,5);
+INSERT INTO `book_has_author` VALUES (4,6);
+INSERT INTO `book_has_author` VALUES (5,9);
+CREATE TABLE "book" (
+	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	`name`	VARCHAR(150) NOT NULL,
+	`year`	INTEGER NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS `product_has_category` (
-  `product_id` int(11) NOT NULL,
-  `category_id` int(11) NOT NULL,
-  PRIMARY KEY (`product_id`,`category_id`)
+INSERT INTO `book` VALUES (1,'Основы агрономии и ботаники.',2004);
+INSERT INTO `book` VALUES (2,'Ботаника: учеб для с/вузов.',2005);
+INSERT INTO `book` VALUES (3,'Краткий словарь ботанических терминов.',1964);
+INSERT INTO `book` VALUES (4,'Ботаника с основами геоботаники.',1979);
+INSERT INTO `book` VALUES (5,'Ботаника. Систематика высших или наземных растений.',2004);
+CREATE TABLE "author" (
+	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	`name`	VARCHAR(150) NOT NULL
 );
-
-INSERT INTO `category` (`id_cat`, `name`) VALUES
-  (1, 'M4 fasteners'),
-  (2, 'M6 fasteners'),
-  (3, 'M8 fasteners'),
-  (4, 'Nuts'),
-  (5, 'Bolts'),
-  (6, 'Allen fasteners');
-
-INSERT INTO `image` (`id_img`, `name`) VALUES
-  (1, 'M4 nut'),
-  (2, 'M6 nut'),
-  (3, 'M8 nut'),
-  (4, 'M4 bolt generic'),
-  (5, 'M6 bolt generic'),
-  (6, 'M8 bolt generic');
-
-INSERT INTO `product` (`id_prod`, `name`, `image_id`) VALUES
-  (1, 'M6x20, hex', 5),
-  (2, 'M6x20, allen', 5),
-  (3, 'M4x60, philips countersunk', 4),
-  (4, 'M4x60, allen', NULL),
-  (5, 'M4x55, hex', NULL),
-  (6, 'M4 nut', 1),
-  (7, 'M6 nut', 2),
-  (8, 'M8 nut', 3),
-  (9, 'M8x40, allen', 6),
-  (10, 'M8x40, hex', 6);
-
-INSERT INTO `product_has_category` (`product_id`, `category_id`) VALUES
-  (1, 5),
-  (2, 5),
-  (3, 5),
-  (4, 5),
-  (4, 1),
-  (4, 6),
-  (5, 5),
-  (6, 4),
-  (7, 4),
-  (8, 4),
-  (9, 5),
-  (10, 5);
+INSERT INTO `author` VALUES (1,'Андреев Н.Г.');
+INSERT INTO `author` VALUES (2,'Андреев Л.Н.');
+INSERT INTO `author` VALUES (3,'Родман Л.С.');
+INSERT INTO `author` VALUES (4,'Викторов Д.П.');
+INSERT INTO `author` VALUES (5,'Суворов В.В.');
+INSERT INTO `author` VALUES (6,'Воронов И.Н.');
+INSERT INTO `author` VALUES (7,'Еленевский А.Г.');
+INSERT INTO `author` VALUES (8,'Соловьева М.П.');
+INSERT INTO `author` VALUES (9,'Тихомиров В.Н.');
+COMMIT;

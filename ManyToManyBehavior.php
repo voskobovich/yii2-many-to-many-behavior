@@ -56,13 +56,14 @@ class ManyToManyBehavior extends \yii\base\Behavior
             throw new ErrorException("This behavior does not support composite primary keys");
         }
 
+        // Save relations data
         foreach ($this->relations as $attributeName => $params) {
 
             $relationName = $this->getRelationName($attributeName);
             $relation = $primaryModel->getRelation($relationName);
 
             if (!$this->hasNewValue($attributeName)) {
-                break;
+                continue;
             }
 
             $newValue = $this->getNewValue($attributeName);
@@ -73,18 +74,17 @@ class ManyToManyBehavior extends \yii\base\Behavior
                 $bindingKeys = $newValue;
             }
 
-            // Save relations data
-            $connection = $primaryModel::getDb();
 
-            $transaction = $connection->beginTransaction();
-            try {
-                // Many To Many (N-N)
-                if (!empty($relation->via)) {
+            // many-to-many
+            if (!empty($relation->via) && $relation->multiple) {
+                //Assuming junction column is visible from the primary model connection
+                list($junctionTable) = array_values($relation->via->from);
+                list($junctionColumn) = array_keys($relation->via->link);
+                list($relatedColumn) = array_values($relation->link);
 
-                    list($junctionTable) = array_values($relation->via->from);
-                    list($junctionColumn) = array_keys($relation->via->link);
-                    list($relatedColumn) = array_values($relation->link);
-
+                $connection = $primaryModel::getDb();
+                $transaction = $connection->beginTransaction();
+                try {
                     // Remove old relations
                     $connection->createCommand()
                         ->delete($junctionTable, "{$junctionColumn} = :id", [':id' => $primaryModelPk])
@@ -101,34 +101,44 @@ class ManyToManyBehavior extends \yii\base\Behavior
                             ->batchInsert($junctionTable, [$junctionColumn, $relatedColumn], $junctionRows)
                             ->execute();
                     }
-                } elseif (!empty($relation->link) && $relation->multiple) {
-                    //HasMany, primary model HAS MANY foreign models, must update foreign model table
-                    $foreignModel = new $relation->modelClass();
-                    $manyTable = $foreignModel->tableName();
-                    list($manyTableFkColumn) = array_keys($relation->link);
-                    $manyTableFkValue = $primaryModelPk;
-                    list($manyTablePkColumn) = ($foreignModel->primaryKey());
+                    $transaction->commit();
+                } catch (\yii\db\Exception $ex) {
+                    $transaction->rollback();
+                    throw $ex;
+                }
 
-                    //remove all links
+            // one-to-many on the many side
+            } elseif (!empty($relation->link) && $relation->multiple) {
+
+                //HasMany, primary model HAS MANY foreign models, must update foreign model table
+                $foreignModel = new $relation->modelClass();
+                $manyTable = $foreignModel->tableName();
+                list($manyTableFkColumn) = array_keys($relation->link);
+                $manyTableFkValue = $primaryModelPk;
+                list($manyTablePkColumn) = ($foreignModel->primaryKey());
+
+                $connection = $foreignModel::getDb();
+                $transaction = $connection->beginTransaction();
+                try {
+                    // Remove old relations
                     $connection->createCommand()
                         ->update($manyTable, [$manyTableFkColumn => null], [$manyTableFkColumn => $manyTableFkValue])
                         ->execute();
 
-                    //add new links
-                    if (count($bindingKeys)) {
+                    // Write new relations
+                    if (!empty($bindingKeys)) {
                         $connection->createCommand()
                             ->update($manyTable, [$manyTableFkColumn => $manyTableFkValue], ['in', $manyTablePkColumn, $bindingKeys])
                             ->execute();
                     }
-
-                } else {
-                    throw new ErrorException('Relationship type not supported.');
+                    $transaction->commit();
+                } catch (\yii\db\Exception $ex) {
+                    $transaction->rollback();
+                    throw $ex;
                 }
 
-                $transaction->commit();
-
-            } catch (\yii\db\Exception $ex) {
-                $transaction->rollback();
+            } else {
+                throw new ErrorException('Relationship type not supported.');
             }
         }
     }
