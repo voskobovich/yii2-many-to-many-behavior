@@ -135,7 +135,7 @@ class BehaviorTest extends \yii\codeception\TestCase
 
         //simulate form input
         $post = [
-            'Book' => [
+            'BookJson' => [
                 'author_list' => '[7, 9, 8]'
             ]
         ];
@@ -163,7 +163,7 @@ class BehaviorTest extends \yii\codeception\TestCase
 
         //simulate form input
         $post = [
-            'Book' => [
+            'BookJson' => [
                 'author_list' => '[]'
             ]
         ];
@@ -185,7 +185,7 @@ class BehaviorTest extends \yii\codeception\TestCase
 
         //simulate form input
         $post = [
-            'Book' => [
+            'BookJson' => [
                 'review_list' => '[2, 4]'
             ]
         ];
@@ -212,7 +212,7 @@ class BehaviorTest extends \yii\codeception\TestCase
 
         //simulate form input
         $post = [
-            'Book' => [
+            'BookJson' => [
                 'review_list' => '[]'
             ]
         ];

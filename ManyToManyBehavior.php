@@ -68,11 +68,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
             $newValue = $this->getNewValue($attributeName);
 
-            if (!empty($params['get'])) {
-                $bindingKeys = $this->callUserFunction($params['get'], $newValue);
-            } else {
-                $bindingKeys = $newValue;
-            }
+            $bindingKeys = $newValue;
 
 
             // many-to-many
@@ -269,16 +265,15 @@ class ManyToManyBehavior extends \yii\base\Behavior
             $value = $relation->select($foreignModel->getPrimaryKey())->column();
         }
 
-        if (!empty($relationParams['set'])) {
-            return $this->callUserFunction($relationParams['set'], $value);
+        if (!empty($relationParams['get'])) {
+            return $this->callUserFunction($relationParams['get'], $value);
+        } else {
+            return $value;
         }
-
-        return $value;
     }
 
     /**
-     * Sets the value of a component property.
-     * Put it in our temporary variable.
+     * Sets the value of a component property. The data is passed 
      *
      * @param string $name the property name or the event name
      * @param mixed $value the property value
@@ -286,6 +281,12 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     public function __set($name, $value)
     {
-        $this->_values[$name] = $value;
+        $relationParams = $this->getRelationParams($name);
+
+        if (!empty($relationParams['set'])) {
+            $this->_values[$name] = $this->callUserFunction($relationParams['set'], $value);
+        } else {
+            $this->_values[$name] = $value;
+        }
     }
 }
