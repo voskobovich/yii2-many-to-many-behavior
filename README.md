@@ -54,7 +54,7 @@ In this example, `author_list` and `review_list` attributes in the `Book` model 
     },
 ]
 ```
-The getter function is expected to return an array of IDs.
+The setter function receives whatever data comes through the `$_REQUEST` and is expected to return the array of the related model IDs. The getter function receives the array of the related model IDs. 
 
 Adding validation rules
 -------------------------
@@ -85,7 +85,7 @@ Known issues and limitations
 ----------------------------
 
 * Composite primary keys are not supported
-* Junction table for many-to-many links are updated using the connection from the primary model
+* Junction table for many-to-many links is updated using the connection from the primary model
 * In the one-to-many relationship (on the `hasMany` side), old links are removed by setting the corresponding foreign-key column to `NULL`. The database must support this (the column needs to be NULLable).
 
 
