@@ -44,4 +44,9 @@ INSERT INTO `author` VALUES (6,'Воронов И.Н.');
 INSERT INTO `author` VALUES (7,'Еленевский А.Г.');
 INSERT INTO `author` VALUES (8,'Соловьева М.П.');
 INSERT INTO `author` VALUES (9,'Тихомиров В.Н.');
+CREATE TABLE "settings" (
+	`key`	VARCHAR(150) NOT NULL,
+	`value`	VARCHAR(150) NOT NULL
+);
+INSERT INTO `settings` VALUES ('default_review','17');
 COMMIT;

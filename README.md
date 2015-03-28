@@ -41,20 +41,52 @@ public function behaviors()
     ];
 }
 ```
-In this example, `author_list` and `review_list` attributes in the `Book` model are created automatically. By default, they are configured to accept data from a standard select input (see below). However, it is possible to use custom getter and setter functions, which may be useful for interaction with more complex frontend scripts:
+
+### Custom getters and setters ###
+
+Attributes lik `author_list` and `review_list` in the `Book` model are created automatically. By default, they are configured to accept data from a standard select input (see below). However, it is possible to use custom getter and setter functions, which may be useful for interaction with more complex frontend scripts:
 ```php
 ...
 'author_list' => [
     'authors',
     'get' => function($value) {
-        return JSON::decode($value);
-    },
-    'set' => function($value) {
         return JSON::encode($value);
     },
+    'set' => function($value) {
+        return JSON::decode($value);
+    },
 ]
+...
 ```
 The setter function receives whatever data comes through the `$_REQUEST` and is expected to return the array of the related model IDs. The getter function receives the array of the related model IDs. 
+
+### Setting default values for orphaned models ###
+
+When one-to-many relations are saved, old links are removed and new links are created. To remove an old link, the corresponding foreign-key column is set to a certain value. It is `NULL` by default, but can be configured differently. Note that your database must support this, so if you are using `NULL` as a default value, the field must be nullable.
+
+You can supply a constant value like so: 
+
+```php
+...
+'review_list' => [
+    'reviews',
+    'default' => 17,
+],
+...
+```
+
+It is also possible to provide a function to calculate default value:
+
+```php
+...
+'review_list' => [
+    'reviews',
+    'default' => function($connection) {
+        return $connection->createCommand('SELECT value FROM settings WHERE key="default_review"')->queryScalar();
+    },
+],
+...
+```
 
 Adding validation rules
 -------------------------
@@ -86,7 +118,7 @@ Known issues and limitations
 
 * Composite primary keys are not supported
 * Junction table for many-to-many links is updated using the connection from the primary model
-* In the one-to-many relationship (on the `hasMany` side), old links are removed by setting the corresponding foreign-key column to `NULL`. The database must support this (the column needs to be NULLable).
+* In the one-to-many relationship (on the `hasMany` side), 
 
 
 Installation

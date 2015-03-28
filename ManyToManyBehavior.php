@@ -113,12 +113,17 @@ class ManyToManyBehavior extends \yii\base\Behavior
                 $manyTableFkValue = $primaryModelPk;
                 list($manyTablePkColumn) = ($foreignModel->primaryKey());
 
+
                 $connection = $foreignModel::getDb();
                 $transaction = $connection->beginTransaction();
+
+                //get default value
+                $default_value = $this->getDefaultValue($attributeName, $connection);
+
                 try {
                     // Remove old relations
                     $connection->createCommand()
-                        ->update($manyTable, [$manyTableFkColumn => null], [$manyTableFkColumn => $manyTableFkValue])
+                        ->update($manyTable, [$manyTableFkColumn => $default_value], [$manyTableFkColumn => $manyTableFkValue])
                         ->execute();
 
                     // Write new relations
@@ -153,6 +158,17 @@ class ManyToManyBehavior extends \yii\base\Behavior
         }
 
         return call_user_func($function, $value);
+    }
+
+    private function getDefaultValue($name, $connection = null) {
+        $relationParams = $this->getRelationParams($name);
+        if (!isset($relationParams['default'])) {
+            return null;
+        } elseif ($relationParams['default'] instanceof \Closure) {
+            return call_user_func($relationParams['default'], $connection);
+        } else {
+            return $relationParams['default'];
+        }
     }
 
     /**
@@ -273,7 +289,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
     }
 
     /**
-     * Sets the value of a component property. The data is passed 
+     * Sets the value of a component property. The data is passed
      *
      * @param string $name the property name or the event name
      * @param mixed $value the property value
