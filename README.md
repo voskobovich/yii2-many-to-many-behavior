@@ -88,7 +88,7 @@ It is also possible to assign the default value to `NULL` explicitly, like so: `
 ...
 ```
 
-The function accepts 3 parameters. In our example `$model` is the instance of the `Book` class (owner of the behavior), `$relationName` is `reviews` and `$attributeName` is `review_list`. 
+The function accepts 3 parameters. In our example `$model` is the instance of the `Book` class (owner of the behavior), `$relationName` is `'reviews'` and `$attributeName` is `'review_list'`. 
 
 Adding validation rules
 -------------------------
@@ -120,7 +120,7 @@ Known issues and limitations
 
 * Composite primary keys are not supported.
 * Junction table for many-to-many links is updated using the connection from the primary model.
-* When using a function to calculate the return value, keep in mind that this function is called once, right before the relations are saved, and then its result is used to update all relevant rows using one query.
+* When using a function to calculate the default value, keep in mind that this function is called once, right before the relations are saved, and then its result is used to update all relevant rows using one query.
 * Relations are saved using DAO (i. e. by manipulating the tables directly). 
 
 
