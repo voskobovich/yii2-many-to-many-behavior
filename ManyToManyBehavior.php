@@ -16,13 +16,14 @@ use yii\base\ErrorException;
 class ManyToManyBehavior extends \yii\base\Behavior
 {
     /**
-     * Relations list
+     * Stores a list of relations, affected by the behavior. Configurable property.
      * @var array
      */
     public $relations = array();
 
     /**
-     * Relations value
+     * Stores values of relation attributes. All entries in this array are considered
+     * dirty (changed) attributes and will be saved in saveRelations().
      * @var array
      */
     private $_values = array();
@@ -40,7 +41,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
     }
 
     /**
-     * Save relations value in data base
+     * Save all dirty (changed) relation values ($this->_values) to the database
      * @param $event
      * @throws ErrorException
      * @throws \yii\db\Exception
@@ -50,7 +51,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
         /**
          * @var $primaryModel \yii\db\ActiveRecord
          */
-        $primaryModel = $event->sender;
+        $primaryModel = $this->owner;
 
         if (is_array($primaryModelPk = $primaryModel->getPrimaryKey())) {
             throw new ErrorException("This behavior does not support composite primary keys");
@@ -69,7 +70,6 @@ class ManyToManyBehavior extends \yii\base\Behavior
             $newValue = $this->getNewValue($attributeName);
 
             $bindingKeys = $newValue;
-
 
             // many-to-many
             if (!empty($relation->via) && $relation->multiple) {
@@ -113,17 +113,15 @@ class ManyToManyBehavior extends \yii\base\Behavior
                 $manyTableFkValue = $primaryModelPk;
                 list($manyTablePkColumn) = ($foreignModel->primaryKey());
 
-
                 $connection = $foreignModel::getDb();
                 $transaction = $connection->beginTransaction();
 
-                //get default value
-                $default_value = $this->getDefaultValue($attributeName, $connection);
+                $defaultValue = $this->getDefaultValue($attributeName);
 
                 try {
                     // Remove old relations
                     $connection->createCommand()
-                        ->update($manyTable, [$manyTableFkColumn => $default_value], [$manyTableFkColumn => $manyTableFkValue])
+                        ->update($manyTable, [$manyTableFkColumn => $defaultValue], [$manyTableFkColumn => $manyTableFkValue])
                         ->execute();
 
                     // Write new relations
@@ -160,39 +158,44 @@ class ManyToManyBehavior extends \yii\base\Behavior
         return call_user_func($function, $value);
     }
 
-    private function getDefaultValue($name, $connection = null) {
-        $relationParams = $this->getRelationParams($name);
+    /**
+     * Check if an attribute is dirty and must be saved (its new value exists)
+     * @param $attributeName
+     * @return null
+     */
+    private function hasNewValue($attributeName)
+    {
+        return isset($this->_values[$attributeName]);
+    }
+
+    /**
+     * Get value of a dirty attribute by name
+     * @param $attributeName
+     * @return null
+     */
+    private function getNewValue($attributeName)
+    {
+        return $this->_values[$attributeName];
+    }
+
+    /**
+     * Get default value for an attribute (used for 1-N relations)
+     * @param $attributeName
+     * @return mixed
+     */
+    private function getDefaultValue($attributeName) {
+        $relationParams = $this->getRelationParams($attributeName);
         if (!isset($relationParams['default'])) {
             return null;
         } elseif ($relationParams['default'] instanceof \Closure) {
-            return call_user_func($relationParams['default'], $connection);
+            return call_user_func($relationParams['default'], $this->owner, $this->getRelationName($attributeName), $attributeName);
         } else {
             return $relationParams['default'];
         }
     }
 
     /**
-     * Get relation new value
-     * @param $name
-     * @return null
-     */
-    private function getNewValue($name)
-    {
-        return $this->_values[$name];
-    }
-
-    /**
-     * Check has new value
-     * @param $name
-     * @return null
-     */
-    private function hasNewValue($name)
-    {
-        return isset($this->_values[$name]);
-    }
-
-    /**
-     * Get params relation
+     * Get parameters of a relation
      * @param $attributeName
      * @return mixed
      * @throws ErrorException
@@ -207,7 +210,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
     }
 
     /**
-     * Get source attribute name
+     * Get name of a relation
      * @param $attributeName
      * @return null
      */

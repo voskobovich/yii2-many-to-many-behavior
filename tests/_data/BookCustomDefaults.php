@@ -37,8 +37,8 @@ class BookCustomDefaults extends Book
                     ],
                     'review_list_closure' => [
                         'reviews',
-                        'default' => function($connection) {
-                            return $connection->createCommand('SELECT value FROM settings WHERE key="default_review"')->queryScalar();
+                        'default' => function($model, $relationName, $attributeName) {
+                            return Yii::$app->db->createCommand('SELECT value FROM settings WHERE key="default_review"')->queryScalar();
                         },
                     ]
                 ]

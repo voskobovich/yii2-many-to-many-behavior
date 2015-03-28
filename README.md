@@ -2,8 +2,6 @@ Yii2 ManyToMany Behavior
 ========================
 This behavior makes it easy to maintain many-to-many and one-to-many relations in your ActiveRecord models.
 
-*Note: Behavior is still under development and should be used with caution!*
-
 Usage
 -----
 1. In your model, add the behavior and configure it
@@ -62,7 +60,7 @@ The setter function receives whatever data comes through the `$_REQUEST` and is 
 
 ### Setting default values for orphaned models ###
 
-When one-to-many relations are saved, old links are removed and new links are created. To remove an old link, the corresponding foreign-key column is set to a certain value. It is `NULL` by default, but can be configured differently. Note that your database must support this, so if you are using `NULL` as a default value, the field must be nullable.
+When one-to-many relations are saved, old links are removed and new links are created. To remove an old link, the corresponding foreign-key column is set to a certain value. It is `NULL` by default, but can be configured differently. Note that your database must support your chosen default value, so if you are using `NULL` as a default value, the field must be nullable.
 
 You can supply a constant value like so: 
 
@@ -75,18 +73,22 @@ You can supply a constant value like so:
 ...
 ```
 
-It is also possible to provide a function to calculate default value:
+It is also possible to assign the default value to `NULL` explicitly, like so: `'default' => null`. Another option is to provide a function to calculate the default value:
 
 ```php
 ...
 'review_list' => [
     'reviews',
-    'default' => function($connection) {
-        return $connection->createCommand('SELECT value FROM settings WHERE key="default_review"')->queryScalar();
+    'default' => function($model, $relationName, $attributeName) {
+        //default value calculation
+        //...
+        return $defaultValue;
     },
 ],
 ...
 ```
+
+The function accepts 3 parameters. In our example `$model` is the instance of the `Book` class (owner of the behavior), `$relationName` is `reviews` and `$attributeName` is `review_list`. 
 
 Adding validation rules
 -------------------------
@@ -116,9 +118,10 @@ By default, the behavior will accept data from a multiselect field:
 Known issues and limitations
 ----------------------------
 
-* Composite primary keys are not supported
-* Junction table for many-to-many links is updated using the connection from the primary model
-* In the one-to-many relationship (on the `hasMany` side), 
+* Composite primary keys are not supported.
+* Junction table for many-to-many links is updated using the connection from the primary model.
+* When using a function to calculate the return value, keep in mind that this function is called once, right before the relations are saved, and then its result is used to update all relevant rows using one query.
+* Relations are saved using DAO (i. e. by manipulating the tables directly). 
 
 
 Installation
