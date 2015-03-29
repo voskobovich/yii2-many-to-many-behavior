@@ -88,7 +88,20 @@ It is also possible to assign the default value to `NULL` explicitly, like so: `
 ...
 ```
 
-The function accepts 3 parameters. In our example `$model` is the instance of the `Book` class (owner of the behavior), `$relationName` is `'reviews'` and `$attributeName` is `'review_list'`. 
+The function accepts 3 parameters. In our example `$model` is the instance of the `Book` class (owner of the behavior), `$relationName` is `'reviews'` and `$attributeName` is `'review_list'`.
+
+If you need the db connection inside this function, it is recommended to obtain it from either the primary model (`Book`) or the secondary model (`Review`).
+```php
+function($model, $relationName, $attributeName) {
+    //get db connection from primary model (Book)
+    $connection = $model::getDb();
+    ...
+    //OR get db connection from secondary model (Review)
+    $secondaryModelClass = $model->getRelation($relationName)->modelClass;
+    $connection = $secondaryModelClass::getDb();
+    ...
+    //further value calculation logic (db query)
+```  
 
 Adding validation rules
 -------------------------

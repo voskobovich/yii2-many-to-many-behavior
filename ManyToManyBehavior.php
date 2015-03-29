@@ -8,7 +8,7 @@ use yii\base\ErrorException;
 
 /**
  * Class ManyToManyBehavior
- * @package voskobovich\mtm
+ * @package voskobovich\behaviors
  *
  * See README.md for examples
  */
@@ -19,14 +19,14 @@ class ManyToManyBehavior extends \yii\base\Behavior
      * Stores a list of relations, affected by the behavior. Configurable property.
      * @var array
      */
-    public $relations = array();
+    public $relations = [];
 
     /**
      * Stores values of relation attributes. All entries in this array are considered
      * dirty (changed) attributes and will be saved in saveRelations().
      * @var array
      */
-    private $_values = array();
+    private $_values = [];
 
     /**
      * Events list
@@ -88,7 +88,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
                     // Write new relations
                     if (!empty($bindingKeys)) {
-                        $junctionRows = array();
+                        $junctionRows = [];
                         foreach ($bindingKeys as $relatedPk) {
                             array_push($junctionRows, [$primaryModelPk, $relatedPk]);
                         }
