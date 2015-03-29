@@ -24,5 +24,8 @@
         "psr-4": {
             "voskobovich\\behaviors\\": ""
         }
+    },
+    "require-dev": {
+        "yiisoft/yii2-codeception": "~2.0"
     }
 }
