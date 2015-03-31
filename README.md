@@ -40,6 +40,8 @@ public function behaviors()
 }
 ```
 
+Relation names don't need to end in `_list`, and you can use any name for a relation. It is recommended to use meaningful names, though.
+
 ### Custom getters and setters ###
 
 Attributes lik `author_list` and `review_list` in the `Book` model are created automatically. By default, they are configured to accept data from a standard select input (see below). However, it is possible to use custom getter and setter functions, which may be useful for interaction with more complex frontend scripts:
@@ -56,13 +58,13 @@ Attributes lik `author_list` and `review_list` in the `Book` model are created a
 ]
 ...
 ```
-The setter function receives whatever data comes through the `$_REQUEST` and is expected to return the array of the related model IDs. The getter function receives the array of the related model IDs. 
+The setter function receives whatever data comes through the `$_REQUEST` and is expected to return the array of the related model IDs. The getter function receives the array of the related model IDs.
 
 ### Setting default values for orphaned models ###
 
 When one-to-many relations are saved, old links are removed and new links are created. To remove an old link, the corresponding foreign-key column is set to a certain value. It is `NULL` by default, but can be configured differently. Note that your database must support your chosen default value, so if you are using `NULL` as a default value, the field must be nullable.
 
-You can supply a constant value like so: 
+You can supply a constant value like so:
 
 ```php
 ...
@@ -101,7 +103,12 @@ function($model, $relationName, $attributeName) {
     $connection = $secondaryModelClass::getDb();
     ...
     //further value calculation logic (db query)
-```  
+```
+
+### Applying the behaviour several times to a single relationship ###
+
+It is possible to use this behavior for a single relationship multiple times in a single model. For example, it is possible to have `author_list` for normal form input and `author_list_json` for JSON string input at the same time. However, one should keep in mind that parameters are processed in the order they are given in the config, so if both `author_list` and `author_list_json` contain data, items from `author_list` will be saved first only to be overwritten by items from `author_list_json` afterwards. It is advised to provide data to only one of those attributes to avoid this.
+
 
 Adding validation rules
 -------------------------
@@ -122,10 +129,10 @@ Creating form fields
 By default, the behavior will accept data from a multiselect field:
 ```php
 <?= $form->field($model, 'author_list')
-    ->dropDownList($authors_as_array, ['multiple' => true]) ?>
+    ->dropDownList($authorsAsArray, ['multiple' => true]) ?>
 ...
 <?= $form->field($model, 'review_list')
-    ->dropDownList($reviews_as_array, ['multiple' => true]) ?>
+    ->dropDownList($reviewsAsArray, ['multiple' => true]) ?>
 ```
 
 Known issues and limitations
@@ -134,8 +141,7 @@ Known issues and limitations
 * Composite primary keys are not supported.
 * Junction table for many-to-many links is updated using the connection from the primary model.
 * When using a function to calculate the default value, keep in mind that this function is called once, right before the relations are saved, and then its result is used to update all relevant rows using one query.
-* Relations are saved using DAO (i. e. by manipulating the tables directly). 
-
+* Relations are saved using DAO (i. e. by manipulating the tables directly).
 
 Installation
 ------------
