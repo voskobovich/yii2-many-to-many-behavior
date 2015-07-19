@@ -83,7 +83,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
                 try {
                     // Remove old relations
                     $connection->createCommand()
-                        ->delete($junctionTable, "{$junctionColumn} = :id", [':id' => $primaryModelPk])
+                        ->delete($junctionTable, [$junctionColumn => $primaryModelPk])
                         ->execute();
 
                     // Write new relations
