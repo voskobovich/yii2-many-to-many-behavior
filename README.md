@@ -60,6 +60,24 @@ Attributes lik `author_list` and `review_list` in the `Book` model are created a
 ```
 The setter function receives whatever data comes through the `$_REQUEST` and is expected to return the array of the related model IDs. The getter function receives the array of the related model IDs.
 
+### Custom junction table values ###
+
+For seting additional values in junction table (apart columns required for relation), you can use `viaTableValues`:
+
+```php
+...
+'author_list' => [
+    'authors',
+    'viaTableValues' => [
+        'status' => 123,
+        'created_at' => function($model, $relationName, $attributeName) {
+            return new \yii\db\Expression('NOW()');
+        },
+    ],
+]
+...
+```
+
 ### Setting default values for orphaned models ###
 
 When one-to-many relations are saved, old links are removed and new links are created. To remove an old link, the corresponding foreign-key column is set to a certain value. It is `NULL` by default, but can be configured differently. Note that your database must support your chosen default value, so if you are using `NULL` as a default value, the field must be nullable.
