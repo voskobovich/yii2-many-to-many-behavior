@@ -89,12 +89,29 @@ class ManyToManyBehavior extends \yii\base\Behavior
                     // Write new relations
                     if (!empty($bindingKeys)) {
                         $junctionRows = [];
+
+                        $viaTableParams = $this->getViaTableParams($attributeName);
+
                         foreach ($bindingKeys as $relatedPk) {
-                            array_push($junctionRows, [$primaryModelPk, $relatedPk]);
+                            $row = [$primaryModelPk, $relatedPk];
+
+                            // calculate additional viaTable values
+                            foreach (array_keys($viaTableParams) as $viaTableColumn) {
+                                $row[] = $this->getViaTableValue($attributeName, $viaTableColumn);
+                            }
+
+                            array_push($junctionRows, $row);
+                        }
+
+                        $cols = [$junctionColumn, $relatedColumn];
+
+                        // additional viaTable columns
+                        foreach (array_keys($viaTableParams) as $viaTableColumn) {
+                            $cols[] = $viaTableColumn;
                         }
 
                         $connection->createCommand()
-                            ->batchInsert($junctionTable, [$junctionColumn, $relatedColumn], $junctionRows)
+                            ->batchInsert($junctionTable, $cols, $junctionRows)
                             ->execute();
                     }
                     $transaction->commit();
@@ -192,6 +209,36 @@ class ManyToManyBehavior extends \yii\base\Behavior
         } else {
             return $relationParams['default'];
         }
+    }
+
+    /**
+     * Calculate additional value of viaTable
+     * @param  string $attributeName
+     * @param  string $viaTableAttribute
+     * @return mixed
+     */
+    private function getViaTableValue($attributeName, $viaTableAttribute)
+    {
+        $viaTableParams = $this->getViaTableParams($attributeName);
+
+        if (!isset($viaTableParams[$viaTableAttribute])) {
+            return null;
+        } elseif ($viaTableParams[$viaTableAttribute] instanceof \Closure) {
+            return call_user_func($viaTableParams[$viaTableAttribute], $this->owner, $this->getRelationName($attributeName), $attributeName);
+        } else {
+            return $viaTableParams[$viaTableAttribute];
+        }
+    }
+
+    /**
+     * Get additional parameters of viaTable
+     * @param  string $attributeName
+     * @return array
+     */
+    private function getViaTableParams($attributeName)
+    {
+        $params = $this->getRelationParams($attributeName);
+        return isset($params['viaTableValues']) ? $params['viaTableValues'] : [];
     }
 
     /**
