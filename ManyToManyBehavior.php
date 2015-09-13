@@ -74,8 +74,17 @@ class ManyToManyBehavior extends \yii\base\Behavior
             // many-to-many
             if (!empty($relation->via) && $relation->multiple) {
                 //Assuming junction column is visible from the primary model connection
-                list($junctionTable) = array_values($relation->via->from);
-                list($junctionColumn) = array_keys($relation->via->link);
+                if (is_array($relation->via)) {
+                    //via()
+                    $via = $relation->via[1];
+                    $junctionModelClass = $via->modelClass;
+                    $junctionTable = $junctionModelClass::tableName();
+                    list($junctionColumn) = array_keys($via->link);
+                } else {
+                    //viaTable()
+                    list($junctionTable) = array_values($relation->via->from);
+                    list($junctionColumn) = array_keys($relation->via->link);
+                }
                 list($relatedColumn) = array_values($relation->link);
 
                 $connection = $primaryModel::getDb();
