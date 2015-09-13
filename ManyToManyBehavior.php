@@ -29,6 +29,13 @@ class ManyToManyBehavior extends \yii\base\Behavior
     private $_values = [];
 
     /**
+     * Used to store fields that this behavior creates. Each field refers to a relation
+     * and has optional getters and setters.
+     * @var array
+     */
+    private $_fields = [];
+
+    /**
      * Events list
      * @return array
      */
@@ -38,6 +45,44 @@ class ManyToManyBehavior extends \yii\base\Behavior
             ActiveRecord::EVENT_AFTER_INSERT => 'saveRelations',
             ActiveRecord::EVENT_AFTER_UPDATE => 'saveRelations',
         ];
+    }
+
+    /**
+     * Invokes init of parent class and assigns proper values to internal _fields variable
+     */
+    public function init()
+    {
+        parent::init();
+
+        //configure _fields
+        foreach ($this->relations as $attributeName => $params) {
+            //add primary field
+            $this->_fields[$attributeName] = [
+                'attribute' => $attributeName,
+            ];
+            if (isset($params['get'])) {
+                $this->_fields[$attributeName]['get'] = $params['get'];
+            }
+            if (isset($params['set'])) {
+                $this->_fields[$attributeName]['set'] = $params['set'];
+            }
+
+            //add secondary fields
+            if (isset($params['fields'])) {
+                foreach ($params['fields'] as $fieldName => $params) {
+                    $fullFieldName = $attributeName.'_'.$fieldName;
+                    $this->_fields[$fullFieldName] = [
+                        'attribute' => $attributeName,
+                    ];
+                    if (isset($params['get'])) {
+                        $this->_fields[$fullFieldName]['get'] = $params['get'];
+                    }
+                    if (isset($params['set'])) {
+                        $this->_fields[$fullFieldName]['set'] = $params['set'];
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -209,7 +254,8 @@ class ManyToManyBehavior extends \yii\base\Behavior
      * @param $attributeName
      * @return mixed
      */
-    private function getDefaultValue($attributeName) {
+    private function getDefaultValue($attributeName)
+    {
         $relationParams = $this->getRelationParams($attributeName);
         if (!isset($relationParams['default'])) {
             return null;
@@ -248,6 +294,21 @@ class ManyToManyBehavior extends \yii\base\Behavior
     {
         $params = $this->getRelationParams($attributeName);
         return isset($params['viaTableValues']) ? $params['viaTableValues'] : [];
+    }
+
+    /**
+     * Get parameters of a field
+     * @param $fieldName
+     * @return mixed
+     * @throws ErrorException
+     */
+    private function getFieldParams($fieldName)
+    {
+        if (empty($this->_fields[$fieldName])) {
+            throw new ErrorException("Parameter \"{$fieldName}\" does not exist");
+        }
+
+        return $this->_fields[$fieldName];
     }
 
     /**
@@ -296,7 +357,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     public function canGetProperty($name, $checkVars = true)
     {
-        return array_key_exists($name, $this->relations) ?
+        return array_key_exists($name, $this->_fields) ?
             true : parent::canGetProperty($name, $checkVars);
     }
 
@@ -314,7 +375,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     public function canSetProperty($name, $checkVars = true, $checkBehaviors = true)
     {
-        return array_key_exists($name, $this->relations) ?
+        return array_key_exists($name, $this->_fields) ?
             true : parent::canSetProperty($name, $checkVars, $checkBehaviors);
     }
 
@@ -329,21 +390,23 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     public function __get($name)
     {
-        $relationName = $this->getRelationName($name);
-        $relationParams = $this->getRelationParams($name);
+        $fieldParams = $this->getFieldParams($name);
+        $attributeName = $fieldParams['attribute'];
 
-        if ($this->hasNewValue($name)) {
-            $value = $this->getNewValue($name);
+        $relationName = $this->getRelationName($attributeName);
+
+        if ($this->hasNewValue($attributeName)) {
+            $value = $this->getNewValue($attributeName);
         } else {
             $relation = $this->owner->getRelation($relationName);
             $foreignModel = new $relation->modelClass();
             $value = $relation->select($foreignModel->getPrimaryKey())->column();
         }
 
-        if (!empty($relationParams['get'])) {
-            return $this->callUserFunction($relationParams['get'], $value);
-        } else {
+        if (empty($fieldParams['get'])) {
             return $value;
+        } else {
+            return $this->callUserFunction($fieldParams['get'], $value);
         }
     }
 
@@ -356,12 +419,13 @@ class ManyToManyBehavior extends \yii\base\Behavior
      */
     public function __set($name, $value)
     {
-        $relationParams = $this->getRelationParams($name);
+        $fieldParams = $this->getFieldParams($name);
+        $attributeName = $fieldParams['attribute'];
 
-        if (!empty($relationParams['set'])) {
-            $this->_values[$name] = $this->callUserFunction($relationParams['set'], $value);
+        if (!empty($fieldParams['set'])) {
+            $this->_values[$attributeName] = $this->callUserFunction($fieldParams['set'], $value);
         } else {
-            $this->_values[$name] = $value;
+            $this->_values[$attributeName] = $value;
         }
     }
 }
