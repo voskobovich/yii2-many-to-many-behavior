@@ -3,6 +3,7 @@
 use data\Book;
 use data\BookJson;
 use yii\Helpers\ArrayHelper;
+use yii\Helpers\Json;
 
 class BehaviorTest extends \yii\codeception\TestCase
 {
@@ -254,6 +255,46 @@ class BehaviorTest extends \yii\codeception\TestCase
         $this->assertEquals(17, $new_values[1], 'Default value saved');
         $this->assertEquals(17, $new_values[2], 'Default value saved');
         $this->assertEquals(17, $new_values[3], 'Default value saved');
+    }
+
+    public function testCustomGettersSetters()
+    {
+        $review_list = [1, 2, 4];
+        $review_list_json = Json::encode($review_list);
+        $review_list_implode = implode(',', $review_list);
+
+        $author_list = [5, 6];
+        $author_list_json = Json::encode($author_list);
+        $author_list_implode = implode(',', $author_list);
+
+        //assign and getters
+        $model = new data\BookJsonFields;
+        $model->review_list = $review_list;
+        $model->author_list = $author_list;
+
+        $this->assertEquals($model->review_list, $review_list, 'Direct getter');
+        $this->assertEquals($model->author_list, $author_list, 'Direct getter');
+
+        $this->assertEquals($model->author_list_json, $author_list_json, 'JSON getter');
+        $this->assertEquals($model->review_list_json, $review_list_json, 'JSON getter');
+
+        $this->assertEquals($model->review_list_implode, $review_list_implode, 'Implode getter');
+
+        //test json setters
+        $model = new data\BookJsonFields;
+        $model->review_list_json = $review_list_json;
+        $this->assertEquals($model->review_list, $review_list, 'JSON setter');
+        $model->author_list_json = $author_list_json;
+        $this->assertEquals($model->author_list, $author_list, 'JSON setter');
+
+        //test implode setter for non-existence where appropriate
+        $model = new data\BookJsonFields;
+        $this->assertFalse(isset($model->author_list_implode), 'Non-existence of setter where not declared');
+
+        //test implode setter
+        $model = new data\BookJsonFields;
+        $model->review_list_implode = $review_list_implode;
+        $this->assertEquals($model->review_list, $review_list, 'Implode setter');
     }
 
 }

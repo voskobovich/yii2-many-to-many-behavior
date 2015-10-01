@@ -44,21 +44,48 @@ Relation names don't need to end in `_list`, and you can use any name for a rela
 
 ### Custom getters and setters ###
 
-Attributes lik `author_list` and `review_list` in the `Book` model are created automatically. By default, they are configured to accept data from a standard select input (see below). However, it is possible to use custom getter and setter functions, which may be useful for interaction with more complex frontend scripts:
+Attributes like `author_list` and `review_list` in the `Book` model are created automatically. By default, they are configured to accept data from a standard select input (see below). However, it is possible to use custom getter and setter functions, which may be useful for interaction with more complex frontend scripts. It is possible to define many alternative getters and setters for a given attribute:
+
 ```php
-...
+//...
 'author_list' => [
     'authors',
-    'get' => function($value) {
-        return JSON::encode($value);
-    },
-    'set' => function($value) {
-        return JSON::decode($value);
-    },
+    'fields' => [
+        'json' => [
+            'get' => function($value) {
+                //from internal representation (array) to user type
+                return JSON::encode($value);
+            },
+            'set' => function($value) {
+                //from user type to internal representation (array)
+                return JSON::decode($value);
+            },
+        ],
+        'as_string' => [
+            'get' => function($value) {
+                //from internal representation (array) to user type
+                return implode(',', $value);
+            },
+            'set' => function($value) {
+                //from user type to internal representation (array)
+                return explode(',', $value);
+            },
+        ],
+    ],
 ]
-...
+//...
 ```
+
+Field name is concatenated to the attribute name with an underscore. In this example, accessing `$model->authors` will result in an array of IDs, `$model->authors_json` will return a JSON string and `$model->authors_as_string` will return a comma-separated string of IDs. Setters work similarly.
+
+Getters and setters may be ommitted to fall back to default behavior (arrays of IDs).
+
+###### NOTE ######
 The setter function receives whatever data comes through the `$_REQUEST` and is expected to return the array of the related model IDs. The getter function receives the array of the related model IDs.
+
+###### COMPATIBILITY NOTE ######
+Specifying getters and setters for the primary attribute (`author_list` in the above example) is still supported, but not recommended. 
+ 
 
 ### Custom junction table values ###
 
@@ -125,7 +152,7 @@ function($model, $relationName, $attributeName) {
 
 ### Applying the behaviour several times to a single relationship ###
 
-It is possible to use this behavior for a single relationship multiple times in a single model. For example, it is possible to have `author_list` for normal form input and `author_list_json` for JSON string input at the same time. However, one should keep in mind that parameters are processed in the order they are given in the config, so if both `author_list` and `author_list_json` contain data, items from `author_list` will be saved first only to be overwritten by items from `author_list_json` afterwards. It is advised to provide data to only one of those attributes to avoid this.
+It is possible to use this behavior for a single relationship multiple times in a single model. This is not recommended, however.
 
 
 Adding validation rules
