@@ -297,4 +297,16 @@ class BehaviorTest extends \yii\codeception\TestCase
         $this->assertEquals($model->review_list, $review_list, 'Implode setter');
     }
 
+    public function testBadFields()
+    {
+        $caught = false;
+        try {
+            $model = new data\BookBadFields;
+        } catch (\yii\base\ErrorException $e) {
+            $caught = true;
+        }
+
+        $this->assertTrue($caught, 'Caught exception');
+    }
+
 }

@@ -84,8 +84,7 @@ Getters and setters may be ommitted to fall back to default behavior (arrays of 
 The setter function receives whatever data comes through the `$_REQUEST` and is expected to return the array of the related model IDs. The getter function receives the array of the related model IDs.
 
 ###### COMPATIBILITY NOTE ######
-Specifying getters and setters for the primary attribute (`author_list` in the above example) is still supported, but not recommended. 
- 
+Specifying getters and setters for the primary attribute (`author_list` in the above example) is still supported, but not recommended. Best practice is to use primary attribute to get and set values as array of IDs and create `fields` to use other getters and setters.
 
 ### Custom junction table values ###
 

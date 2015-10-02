@@ -71,6 +71,10 @@ class ManyToManyBehavior extends \yii\base\Behavior
             if (isset($params['fields'])) {
                 foreach ($params['fields'] as $fieldName => $params) {
                     $fullFieldName = $attributeName.'_'.$fieldName;
+                    if (isset($this->_fields[$fullFieldName])) {
+                        throw new ErrorException("Ambiguous field name definition: {$fullFieldName}");
+                    }
+
                     $this->_fields[$fullFieldName] = [
                         'attribute' => $attributeName,
                     ];
