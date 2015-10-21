@@ -153,6 +153,72 @@ function($model, $relationName, $attributeName) {
 
 It is possible to use this behavior for a single relationship multiple times in a single model. This is not recommended, however.
 
+### Using the behaviour with relations that are using the same junction table ###
+
+When you are implementing multiple ManyToMany relations in the same model, and they are using same junction table,
+you may face and issue when your junction records will not be saved properly.
+
+This happens because old junction records are dropped each time new relation is saved.
+To avoid deletion of records that were just saved, you will need to set `customDeleteCondition` param.
+
+This delete condition will be merged with primary delete condition and may be used to fine tune your delete query.
+
+The following example should give you better understanding of how it works:
+
+```php
+    public function behaviors()
+    {
+        return [
+            'manyToMany' => [
+                'class' => ManyToManyBehavior::class,
+                'relations' => [
+                    'relation_one_list' => [
+                        'relationOne',
+                        'viaTableValues' => [
+                            'type' => 'Type #1',
+                        ],
+                        'customDeleteCondition' => [
+                            'type' => 'Type #1',
+                        ],
+                    ],
+                    'relation_two_list' => [
+                        'relationTwo',
+                        'viaTableValues' => [
+                            'type' => 'Type #2',
+                        ],
+                        'customDeleteCondition' => [
+                            'type' => 'Type #2',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+    }
+    
+    public function getRelationOne()
+    {
+        return $this->hasMany(RelatedModel::className(), ['id' => 'related_id'])
+                    ->viaTable(JunctionModel::tableName(), ['current_id' => 'id'], function (ActiveQuery $query) use ($field) {
+                        $query->andWhere([
+                            'type' => 'Type #1',
+                        ]);
+                        return $query;
+                    });
+    }
+    
+    public function getRelationTwo()
+    {
+        return $this->hasMany(RelatedModel::className(), ['id' => 'related_id'])
+                    ->viaTable(JunctionModel::tableName(), ['current_id' => 'id'], function (ActiveQuery $query) use ($field) {
+                        $query->andWhere([
+                            'type' => 'Type #2',
+                        ]);
+                        return $query;
+                    });
+    }
+    
+```
+
 
 Adding validation rules
 -------------------------

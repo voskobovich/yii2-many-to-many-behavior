@@ -5,6 +5,7 @@ namespace voskobovich\behaviors;
 use Yii;
 use yii\db\ActiveRecord;
 use yii\base\ErrorException;
+use yii\helpers\ArrayHelper;
 
 /**
  * Class ManyToManyBehavior
@@ -141,7 +142,10 @@ class ManyToManyBehavior extends \yii\base\Behavior
                 try {
                     // Remove old relations
                     $connection->createCommand()
-                        ->delete($junctionTable, [$junctionColumn => $primaryModelPk])
+                        ->delete($junctionTable, ArrayHelper::merge(
+                            [$junctionColumn => $primaryModelPk],
+                            $this->getCustomDeleteCondition($attributeName)
+                        ))
                         ->execute();
 
                     // Write new relations
@@ -298,6 +302,17 @@ class ManyToManyBehavior extends \yii\base\Behavior
     {
         $params = $this->getRelationParams($attributeName);
         return isset($params['viaTableValues']) ? $params['viaTableValues'] : [];
+    }
+
+    /**
+     * Get custom condition used to delete old records.
+     * @param  string $attributeName
+     * @return array
+     */
+    private function getCustomDeleteCondition($attributeName)
+    {
+        $params = $this->getRelationParams($attributeName);
+        return isset($params['customDeleteCondition']) ? $params['customDeleteCondition'] : [];
     }
 
     /**
