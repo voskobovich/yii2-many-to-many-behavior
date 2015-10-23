@@ -175,7 +175,7 @@ In such case, the resulting "Sample" model will look like this:
     {
         return [
             'manyToMany' => [
-                'class' => ManyToManyBehavior::class,
+                'class' => ManyToManyBehavior::className(),
                 'relations' => [
                     'rawMaterialPicturesList' => [
                         'rawMaterialPictures',
