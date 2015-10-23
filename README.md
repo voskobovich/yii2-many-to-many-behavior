@@ -153,6 +153,77 @@ function($model, $relationName, $attributeName) {
 
 It is possible to use this behavior for a single relationship multiple times in a single model. This is not recommended, however.
 
+### Using the behaviour with relations that are using the same junction table ###
+
+When you are implementing multiple ManyToMany relations in the same model, and they are using same junction table,
+you may face and issue when your junction records will not be saved properly.
+
+This happens because old junction records are dropped each time new relation is saved.
+To avoid deletion of records that were just saved, you will need to set `customDeleteCondition` param.
+
+This delete condition will be merged with primary delete condition and may be used to fine tune your delete query.
+
+For example, let's imagine that we develop a scientific database for botanical laboratory.
+We have a model called "Sample" for different plants samples, model called "Attachment" for related files
+(photos or documents) and junction table "sample_attachments".
+And we want to divide all those files into separate fields in the "Sample" model (raw material pictures,
+molecular structure, etc) by introducing field "type" in the junction table.
+In such case, the resulting "Sample" model will look like this:
+
+```php
+    public function behaviors()
+    {
+        return [
+            'manyToMany' => [
+                'class' => ManyToManyBehavior::className(),
+                'relations' => [
+                    'rawMaterialPicturesList' => [
+                        'rawMaterialPictures',
+                        'viaTableValues' => [
+                            'type' => 'RAW_MATERIAL_PICTURES',
+                        ],
+                        'customDeleteCondition' => [
+                            'type' => 'RAW_MATERIAL_PICTURES',
+                        ],
+                    ],
+                    'molecularStructureList' => [
+                        'molecularStructure',
+                        'viaTableValues' => [
+                            'type' => 'MOLECULAR_STRUCTURE',
+                        ],
+                        'customDeleteCondition' => [
+                            'type' => 'MOLECULAR_STRUCTURE',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+    }
+    
+    public function getRawMaterialPictures()
+    {
+        return $this->hasMany(Attachment::className(), ['id' => 'related_id'])
+                    ->viaTable('sample_attachments', ['current_id' => 'id'], function (ActiveQuery $query) use ($field) {
+                        $query->andWhere([
+                            'type' => 'RAW_MATERIAL_PICTURES',
+                        ]);
+                        return $query;
+                    });
+    }
+    
+    public function getMolecularStructure()
+    {
+        return $this->hasMany(Attachment::className(), ['id' => 'related_id'])
+                    ->viaTable('sample_attachments', ['current_id' => 'id'], function (ActiveQuery $query) use ($field) {
+                        $query->andWhere([
+                            'type' => 'MOLECULAR_STRUCTURE',
+                        ]);
+                        return $query;
+                    });
+    }
+    
+```
+
 
 Adding validation rules
 -------------------------
