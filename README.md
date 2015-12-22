@@ -42,6 +42,39 @@ public function behaviors()
 
 Relation names don't need to end in `_ids`, and you can use any name for a relation. It is recommended to use meaningful names, though.
 
+Adding validation rules
+-------------------------
+
+The attributes are created automatically. However, you must supply a validation rule for them (usually a `safe` validator):
+```php
+public function rules()
+{
+    return [
+        [['author_ids', 'review_ids'], 'each', 'rule' => ['integer']]
+    ];
+}
+```
+
+Creating form fields
+--------------------
+
+By default, the behavior will accept data from a multiselect field:
+```php
+<?= $form->field($model, 'author_ids')
+    ->dropDownList($authorsAsArray, ['multiple' => true]) ?>
+...
+<?= $form->field($model, 'review_ids')
+    ->dropDownList($reviewsAsArray, ['multiple' => true]) ?>
+```
+
+Known issues and limitations
+----------------------------
+
+* Composite primary keys are not supported.
+* Junction table for many-to-many links is updated using the connection from the primary model.
+* When using a function to calculate the default value, keep in mind that this function is called once, right before the relations are saved, and then its result is used to update all relevant rows using one query.
+* Relations are saved using DAO (i. e. by manipulating the tables directly).
+
 ### Custom getters and setters ###
 
 Attributes like `author_ids` and `review_ids` in the `Book` model are created automatically. By default, they are configured to accept data from a standard select input (see below). However, it is possible to use custom getter and setter functions, which may be useful for interaction with more complex frontend scripts. It is possible to define many alternative getters and setters for a given attribute:
@@ -61,7 +94,7 @@ Attributes like `author_ids` and `review_ids` in the `Book` model are created au
                 return JSON::decode($value);
             },
         ],
-        'as_string' => [
+        'string' => [
             'get' => function($value) {
                 //from internal representation (array) to user type
                 return implode(',', $value);
@@ -76,7 +109,7 @@ Attributes like `author_ids` and `review_ids` in the `Book` model are created au
 //...
 ```
 
-Field name is concatenated to the attribute name with an underscore. In this example, accessing `$model->authors` will result in an array of IDs, `$model->authors_json` will return a JSON string and `$model->authors_as_string` will return a comma-separated string of IDs. Setters work similarly.
+Field name is concatenated to the attribute name with an underscore. In this example, accessing `$model->author_ids` will result in an array of IDs, `$model->author_ids_json` will return a JSON string and `$model->author_ids_string` will return a comma-separated string of IDs. Setters work similarly.
 
 Getters and setters may be ommitted to fall back to default behavior (arrays of IDs).
 
@@ -95,7 +128,7 @@ For seting additional values in junction table (apart columns required for relat
 'author_ids' => [
     'authors',
     'viaTableValues' => [
-        'status' => BookHasAuthor::STATUS_ACTIVE,
+        'status_key' => BookHasAuthor::STATUS_ACTIVE,
         'created_at' => function() {
             return new \yii\db\Expression('NOW()');
         },
@@ -183,19 +216,19 @@ In such case, the resulting "Sample" model will look like this:
                     'rawMaterialPicturesList' => [
                         'rawMaterialPictures',
                         'viaTableValues' => [
-                            'type' => 'RAW_MATERIAL_PICTURES',
+                            'type_key' => 'RAW_MATERIAL_PICTURES',
                         ],
                         'customDeleteCondition' => [
-                            'type' => 'RAW_MATERIAL_PICTURES',
+                            'type_key' => 'RAW_MATERIAL_PICTURES',
                         ],
                     ],
                     'molecularStructureList' => [
                         'molecularStructure',
                         'viaTableValues' => [
-                            'type' => 'MOLECULAR_STRUCTURE',
+                            'type_key' => 'MOLECULAR_STRUCTURE',
                         ],
                         'customDeleteCondition' => [
-                            'type' => 'MOLECULAR_STRUCTURE',
+                            'type_key' => 'MOLECULAR_STRUCTURE',
                         ],
                     ],
                 ],
@@ -206,60 +239,26 @@ In such case, the resulting "Sample" model will look like this:
     public function getRawMaterialPictures()
     {
         return $this->hasMany(Attachment::className(), ['id' => 'related_id'])
-                    ->viaTable('sample_attachments', ['current_id' => 'id'], function (ActiveQuery $query) use ($field) {
-                        $query->andWhere([
-                            'type' => 'RAW_MATERIAL_PICTURES',
-                        ]);
-                        return $query;
-                    });
+            ->viaTable('sample_attachments', ['current_id' => 'id'], function ($query) {
+                $query->andWhere([
+                    'type_key' => 'RAW_MATERIAL_PICTURES',
+                ]);
+                return $query;
+            });
     }
     
     public function getMolecularStructure()
     {
         return $this->hasMany(Attachment::className(), ['id' => 'related_id'])
-                    ->viaTable('sample_attachments', ['current_id' => 'id'], function (ActiveQuery $query) use ($field) {
-                        $query->andWhere([
-                            'type' => 'MOLECULAR_STRUCTURE',
-                        ]);
-                        return $query;
-                    });
+            ->viaTable('sample_attachments', ['current_id' => 'id'], function ($query) {
+                $query->andWhere([
+                    'type_key' => 'MOLECULAR_STRUCTURE',
+                ]);
+                return $query;
+            });
     }
     
 ```
-
-
-Adding validation rules
--------------------------
-
-The attributes are created automatically. However, you must supply a validation rule for them (usually a `safe` validator):
-```php
-public function rules()
-{
-    return [
-        [['author_ids', 'review_ids'], 'safe']
-    ];
-}
-```
-
-Creating form fields
---------------------
-
-By default, the behavior will accept data from a multiselect field:
-```php
-<?= $form->field($model, 'author_ids')
-    ->dropDownList($authorsAsArray, ['multiple' => true]) ?>
-...
-<?= $form->field($model, 'review_ids')
-    ->dropDownList($reviewsAsArray, ['multiple' => true]) ?>
-```
-
-Known issues and limitations
-----------------------------
-
-* Composite primary keys are not supported.
-* Junction table for many-to-many links is updated using the connection from the primary model.
-* When using a function to calculate the default value, keep in mind that this function is called once, right before the relations are saved, and then its result is used to update all relevant rows using one query.
-* Relations are saved using DAO (i. e. by manipulating the tables directly).
 
 Installation
 ------------
