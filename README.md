@@ -32,23 +32,23 @@ public function behaviors()
         [
             'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
             'relations' => [
-                'author_list' => 'authors',
-				'review_list' => 'reviews',
+                'author_ids' => 'authors',
+				'review_ids' => 'reviews',
             ],
         ],
     ];
 }
 ```
 
-Relation names don't need to end in `_list`, and you can use any name for a relation. It is recommended to use meaningful names, though.
+Relation names don't need to end in `_ids`, and you can use any name for a relation. It is recommended to use meaningful names, though.
 
 ### Custom getters and setters ###
 
-Attributes like `author_list` and `review_list` in the `Book` model are created automatically. By default, they are configured to accept data from a standard select input (see below). However, it is possible to use custom getter and setter functions, which may be useful for interaction with more complex frontend scripts. It is possible to define many alternative getters and setters for a given attribute:
+Attributes like `author_ids` and `review_ids` in the `Book` model are created automatically. By default, they are configured to accept data from a standard select input (see below). However, it is possible to use custom getter and setter functions, which may be useful for interaction with more complex frontend scripts. It is possible to define many alternative getters and setters for a given attribute:
 
 ```php
 //...
-'author_list' => [
+'author_ids' => [
     'authors',
     'fields' => [
         'json' => [
@@ -84,7 +84,7 @@ Getters and setters may be ommitted to fall back to default behavior (arrays of 
 The setter function receives whatever data comes through the `$_REQUEST` and is expected to return the array of the related model IDs. The getter function receives the array of the related model IDs.
 
 ###### COMPATIBILITY NOTE ######
-Specifying getters and setters for the primary attribute (`author_list` in the above example) is still supported, but not recommended. Best practice is to use primary attribute to get and set values as array of IDs and create `fields` to use other getters and setters.
+Specifying getters and setters for the primary attribute (`author_ids` in the above example) is still supported, but not recommended. Best practice is to use primary attribute to get and set values as array of IDs and create `fields` to use other getters and setters.
 
 ### Custom junction table values ###
 
@@ -92,12 +92,15 @@ For seting additional values in junction table (apart columns required for relat
 
 ```php
 ...
-'author_list' => [
+'author_ids' => [
     'authors',
     'viaTableValues' => [
-        'status' => 123,
-        'created_at' => function($model, $relationName, $attributeName) {
+        'status' => BookHasAuthor::STATUS_ACTIVE,
+        'created_at' => function() {
             return new \yii\db\Expression('NOW()');
+        },
+        'is_main' => function($model, $relationName, $attributeName, $relatedPk) {
+            return array_search($relatedPk, $model->author_ids) === 0;
         },
     ],
 ]
@@ -112,7 +115,7 @@ You can supply a constant value like so:
 
 ```php
 ...
-'review_list' => [
+'review_ids' => [
     'reviews',
     'default' => 17,
 ],
@@ -123,7 +126,7 @@ It is also possible to assign the default value to `NULL` explicitly, like so: `
 
 ```php
 ...
-'review_list' => [
+'review_ids' => [
     'reviews',
     'default' => function($model, $relationName, $attributeName) {
         //default value calculation
@@ -134,7 +137,7 @@ It is also possible to assign the default value to `NULL` explicitly, like so: `
 ...
 ```
 
-The function accepts 3 parameters. In our example `$model` is the instance of the `Book` class (owner of the behavior), `$relationName` is `'reviews'` and `$attributeName` is `'review_list'`.
+The function accepts 3 parameters. In our example `$model` is the instance of the `Book` class (owner of the behavior), `$relationName` is `'reviews'` and `$attributeName` is `'review_ids'`.
 
 If you need the db connection inside this function, it is recommended to obtain it from either the primary model (`Book`) or the secondary model (`Review`).
 ```php
@@ -233,7 +236,7 @@ The attributes are created automatically. However, you must supply a validation 
 public function rules()
 {
     return [
-        [['author_list', 'review_list'], 'safe']
+        [['author_ids', 'review_ids'], 'safe']
     ];
 }
 ```
@@ -243,10 +246,10 @@ Creating form fields
 
 By default, the behavior will accept data from a multiselect field:
 ```php
-<?= $form->field($model, 'author_list')
+<?= $form->field($model, 'author_ids')
     ->dropDownList($authorsAsArray, ['multiple' => true]) ?>
 ...
-<?= $form->field($model, 'review_list')
+<?= $form->field($model, 'review_ids')
     ->dropDownList($reviewsAsArray, ['multiple' => true]) ?>
 ```
 
@@ -266,13 +269,13 @@ The preferred way to install this extension is through [composer](http://getcomp
 Either run
 
 ```
-php composer.phar require --prefer-dist voskobovich/yii2-many-many-behavior "*"
+php composer.phar require --prefer-dist voskobovich/yii2-many-many-behavior "~3.0"
 ```
 
 or add
 
 ```
-"voskobovich/yii2-many-many-behavior": "*"
+"voskobovich/yii2-many-many-behavior": "~3.0"
 ```
 
 to the require section of your `composer.json` file.

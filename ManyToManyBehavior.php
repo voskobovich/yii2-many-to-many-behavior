@@ -3,8 +3,10 @@
 namespace voskobovich\behaviors;
 
 use Yii;
+use yii\base\Behavior;
 use yii\db\ActiveRecord;
 use yii\base\ErrorException;
+use yii\db\Exception;
 use yii\helpers\ArrayHelper;
 
 /**
@@ -13,8 +15,7 @@ use yii\helpers\ArrayHelper;
  *
  * See README.md for examples
  */
-
-class ManyToManyBehavior extends \yii\base\Behavior
+class ManyToManyBehavior extends Behavior
 {
     /**
      * Stores a list of relations, affected by the behavior. Configurable property.
@@ -94,7 +95,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
      * Save all dirty (changed) relation values ($this->_values) to the database
      * @param $event
      * @throws ErrorException
-     * @throws \yii\db\Exception
+     * @throws Exception
      */
     public function saveRelations($event)
     {
@@ -159,7 +160,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
                             // calculate additional viaTable values
                             foreach (array_keys($viaTableParams) as $viaTableColumn) {
-                                $row[] = $this->getViaTableValue($attributeName, $viaTableColumn);
+                                $row[] = $this->getViaTableValue($attributeName, $viaTableColumn, $relatedPk);
                             }
 
                             array_push($junctionRows, $row);
@@ -177,7 +178,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
                             ->execute();
                     }
                     $transaction->commit();
-                } catch (\yii\db\Exception $ex) {
+                } catch (Exception $ex) {
                     $transaction->rollback();
                     throw $ex;
                 }
@@ -200,17 +201,23 @@ class ManyToManyBehavior extends \yii\base\Behavior
                 try {
                     // Remove old relations
                     $connection->createCommand()
-                        ->update($manyTable, [$manyTableFkColumn => $defaultValue], [$manyTableFkColumn => $manyTableFkValue])
+                        ->update(
+                            $manyTable,
+                            [$manyTableFkColumn => $defaultValue],
+                            [$manyTableFkColumn => $manyTableFkValue])
                         ->execute();
 
                     // Write new relations
                     if (!empty($bindingKeys)) {
                         $connection->createCommand()
-                            ->update($manyTable, [$manyTableFkColumn => $manyTableFkValue], ['in', $manyTablePkColumn, $bindingKeys])
+                            ->update(
+                                $manyTable,
+                                [$manyTableFkColumn => $manyTableFkValue],
+                                ['in', $manyTablePkColumn, $bindingKeys])
                             ->execute();
                     }
                     $transaction->commit();
-                } catch (\yii\db\Exception $ex) {
+                } catch (Exception $ex) {
                     $transaction->rollback();
                     throw $ex;
                 }
@@ -239,7 +246,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Check if an attribute is dirty and must be saved (its new value exists)
-     * @param $attributeName
+     * @param string $attributeName
      * @return null
      */
     private function hasNewValue($attributeName)
@@ -249,7 +256,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Get value of a dirty attribute by name
-     * @param $attributeName
+     * @param string $attributeName
      * @return null
      */
     private function getNewValue($attributeName)
@@ -259,7 +266,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Get default value for an attribute (used for 1-N relations)
-     * @param $attributeName
+     * @param string $attributeName
      * @return mixed
      */
     private function getDefaultValue($attributeName)
@@ -268,7 +275,9 @@ class ManyToManyBehavior extends \yii\base\Behavior
         if (!isset($relationParams['default'])) {
             return null;
         } elseif ($relationParams['default'] instanceof \Closure) {
-            return call_user_func($relationParams['default'], $this->owner, $this->getRelationName($attributeName), $attributeName);
+            $function = $relationParams['default'];
+            $relationName = $this->getRelationName($attributeName);
+            return call_user_func($function, $this->owner, $relationName, $attributeName);
         } else {
             return $relationParams['default'];
         }
@@ -276,26 +285,29 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Calculate additional value of viaTable
-     * @param  string $attributeName
-     * @param  string $viaTableAttribute
+     * @param string $attributeName
+     * @param string $viaTableAttribute
+     * @param integer $relatedPk
      * @return mixed
      */
-    private function getViaTableValue($attributeName, $viaTableAttribute)
+    private function getViaTableValue($attributeName, $viaTableAttribute, $relatedPk)
     {
         $viaTableParams = $this->getViaTableParams($attributeName);
 
         if (!isset($viaTableParams[$viaTableAttribute])) {
             return null;
         } elseif ($viaTableParams[$viaTableAttribute] instanceof \Closure) {
-            return call_user_func($viaTableParams[$viaTableAttribute], $this->owner, $this->getRelationName($attributeName), $attributeName);
-        } else {
-            return $viaTableParams[$viaTableAttribute];
+            $closure = $viaTableParams[$viaTableAttribute];
+            $relationName = $this->getRelationName($attributeName);
+            return call_user_func($closure, $this->owner, $relationName, $attributeName, $relatedPk);
         }
+
+        return $viaTableParams[$viaTableAttribute];
     }
 
     /**
      * Get additional parameters of viaTable
-     * @param  string $attributeName
+     * @param string $attributeName
      * @return array
      */
     private function getViaTableParams($attributeName)
@@ -306,7 +318,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Get custom condition used to delete old records.
-     * @param  string $attributeName
+     * @param string $attributeName
      * @return array
      */
     private function getCustomDeleteCondition($attributeName)
@@ -317,7 +329,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Get parameters of a field
-     * @param $fieldName
+     * @param string $fieldName
      * @return mixed
      * @throws ErrorException
      */
@@ -332,7 +344,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Get parameters of a relation
-     * @param $attributeName
+     * @param string $attributeName
      * @return mixed
      * @throws ErrorException
      */
@@ -347,7 +359,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
 
     /**
      * Get name of a relation
-     * @param $attributeName
+     * @param string $attributeName
      * @return null
      */
     private function getRelationName($attributeName)
@@ -360,7 +372,7 @@ class ManyToManyBehavior extends \yii\base\Behavior
             return $params[0];
         }
 
-        return NULL;
+        return null;
     }
 
     /**
