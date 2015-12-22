@@ -272,15 +272,18 @@ class ManyToManyBehavior extends Behavior
     private function getDefaultValue($attributeName)
     {
         $relationParams = $this->getRelationParams($attributeName);
+        
         if (!isset($relationParams['default'])) {
             return null;
-        } elseif ($relationParams['default'] instanceof \Closure) {
-            $function = $relationParams['default'];
-            $relationName = $this->getRelationName($attributeName);
-            return call_user_func($function, $this->owner, $relationName, $attributeName);
-        } else {
-            return $relationParams['default'];
         }
+        
+        if ($relationParams['default'] instanceof \Closure) {
+            $closure = $relationParams['default'];
+            $relationName = $this->getRelationName($attributeName);
+            return call_user_func($closure, $this->owner, $relationName, $attributeName);
+        }
+        
+        return $relationParams['default'];
     }
 
     /**
@@ -296,7 +299,9 @@ class ManyToManyBehavior extends Behavior
 
         if (!isset($viaTableParams[$viaTableAttribute])) {
             return null;
-        } elseif ($viaTableParams[$viaTableAttribute] instanceof \Closure) {
+        }
+        
+        if ($viaTableParams[$viaTableAttribute] instanceof \Closure) {
             $closure = $viaTableParams[$viaTableAttribute];
             $relationName = $this->getRelationName($attributeName);
             return call_user_func($closure, $this->owner, $relationName, $attributeName, $relatedPk);
@@ -368,7 +373,9 @@ class ManyToManyBehavior extends Behavior
 
         if (is_string($params)) {
             return $params;
-        } elseif (is_array($params) && !empty($params[0])) {
+        }
+        
+        if (is_array($params) && !empty($params[0])) {
             return $params[0];
         }
 
@@ -436,9 +443,9 @@ class ManyToManyBehavior extends Behavior
 
         if (empty($fieldParams['get'])) {
             return $value;
-        } else {
-            return $this->callUserFunction($fieldParams['get'], $value);
         }
+        
+        return $this->callUserFunction($fieldParams['get'], $value);
     }
 
     /**
