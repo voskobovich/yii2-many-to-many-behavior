@@ -120,6 +120,10 @@ class ManyToManyBehavior extends Behavior
 
             $newValue = $this->getNewValue($attributeName);
 
+            $empty_array=[0=>''];
+            if(is_array($newValue) && !array_diff($newValue,$empty_array))
+                continue;
+
             $bindingKeys = $newValue;
 
             // many-to-many
