@@ -71,7 +71,7 @@ class ManyToManyBehavior extends Behavior
 
             //add secondary fields
             if (isset($params['fields'])) {
-                foreach ($params['fields'] as $fieldName => $params) {
+                foreach ($params['fields'] as $fieldName => $adjustments) {
                     $fullFieldName = $attributeName.'_'.$fieldName;
                     if (isset($this->_fields[$fullFieldName])) {
                         throw new ErrorException("Ambiguous field name definition: {$fullFieldName}");
@@ -80,11 +80,11 @@ class ManyToManyBehavior extends Behavior
                     $this->_fields[$fullFieldName] = [
                         'attribute' => $attributeName,
                     ];
-                    if (isset($params['get'])) {
-                        $this->_fields[$fullFieldName]['get'] = $params['get'];
+                    if (isset($adjustments['get'])) {
+                        $this->_fields[$fullFieldName]['get'] = $adjustments['get'];
                     }
-                    if (isset($params['set'])) {
-                        $this->_fields[$fullFieldName]['set'] = $params['set'];
+                    if (isset($adjustments['set'])) {
+                        $this->_fields[$fullFieldName]['set'] = $adjustments['set'];
                     }
                 }
             }
@@ -183,7 +183,7 @@ class ManyToManyBehavior extends Behavior
                     throw $ex;
                 }
 
-            // one-to-many on the many side
+                // one-to-many on the many side
             } elseif (!empty($relation->link) && $relation->multiple) {
 
                 //HasMany, primary model HAS MANY foreign models, must update foreign model table
