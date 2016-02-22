@@ -3,7 +3,7 @@
 namespace data;
 
 use Yii;
-use yii\helpers\JSON;
+use yii\helpers\Json;
 
 class BookJson extends Book
 {
@@ -18,19 +18,19 @@ class BookJson extends Book
                     'author_list' => [
                         'authors',
                         'get' => function($value) {
-                            return JSON::encode($value);
+                            return Json::encode($value);
                         },
                         'set' => function($value) {
-                            return JSON::decode($value);
+                            return Json::decode($value);
                         },
                     ],
                     'review_list' => [
                         'reviews',
                         'get' => function($value) {
-                            return JSON::encode($value);
+                            return Json::encode($value);
                         },
                         'set' => function($value) {
-                            return JSON::decode($value);
+                            return Json::decode($value);
                         },
                     ]
                 ]

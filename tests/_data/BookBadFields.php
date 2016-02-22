@@ -3,7 +3,7 @@
 namespace data;
 
 use Yii;
-use yii\helpers\JSON;
+use yii\helpers\Json;
 
 class BookBadFields extends Book
 {
@@ -20,10 +20,10 @@ class BookBadFields extends Book
                         'fields' => [
                             'list_json' => [
                                 'get' => function($value) {
-                                    return JSON::encode($value);
+                                    return Json::encode($value);
                                 },
                                 'set' => function($value) {
-                                    return JSON::decode($value);
+                                    return Json::decode($value);
                                 },
                             ],
                         ],
@@ -33,10 +33,10 @@ class BookBadFields extends Book
                         'fields' => [
                             'json' => [
                                 'get' => function($value) {
-                                    return JSON::encode($value);
+                                    return Json::encode($value);
                                 },
                                 'set' => function($value) {
-                                    return JSON::decode($value);
+                                    return Json::decode($value);
                                 },
                             ],
                         ],
