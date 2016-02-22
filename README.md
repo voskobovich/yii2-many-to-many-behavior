@@ -2,6 +2,16 @@ Yii2 ManyToMany Behavior
 ========================
 This behavior makes it easy to maintain many-to-many and one-to-many relations in your ActiveRecord models.
 
+[![License](https://poser.pugx.org/voskobovich/yii2-many-to-many-behavior/license.svg)](https://packagist.org/packages/voskobovich/yii2-many-to-many-behavior)
+[![Latest Stable Version](https://poser.pugx.org/voskobovich/yii2-many-to-many-behavior/v/stable.svg)](https://packagist.org/packages/voskobovich/yii2-many-to-many-behavior)
+[![Latest Unstable Version](https://poser.pugx.org/voskobovich/yii2-many-to-many-behavior/v/unstable.svg)](https://packagist.org/packages/voskobovich/yii2-many-to-many-behavior)
+[![Total Downloads](https://poser.pugx.org/voskobovich/yii2-many-to-many-behavior/downloads.svg)](https://packagist.org/packages/voskobovich/yii2-many-to-many-behavior)
+[![Build Status](https://travis-ci.org/voskobovich/yii2-many-to-many-behavior.svg?branch=master)](https://travis-ci.org/voskobovich/yii2-many-to-many-behavior)
+
+Support
+---
+[GutHub issues](https://github.com/voskobovich/yii2-many-to-many-behavior/issues).
+
 Usage
 -----
 1. In your model, add the behavior and configure it
