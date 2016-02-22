@@ -278,13 +278,13 @@ The preferred way to install this extension is through [composer](http://getcomp
 Either run
 
 ```
-php composer.phar require --prefer-dist voskobovich/yii2-many-many-behavior "~3.0"
+php composer.phar require --prefer-dist voskobovich/yii2-many-many-behavior "^3.0"
 ```
 
 or add
 
 ```
-"voskobovich/yii2-many-many-behavior": "~3.0"
+"voskobovich/yii2-many-many-behavior": "^3.0"
 ```
 
 to the require section of your `composer.json` file.
