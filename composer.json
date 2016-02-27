@@ -14,11 +14,16 @@
             "name": "Vitaly Voskobovich",
             "email": "vitaly@voskobovich.com",
             "homepage": "http://voskobovich.com"
+        },
+        {
+            "name": "Konstantin Sirotkin",
+            "email": "beowulfenator@gmail.com",
+            "homepage": "http://beowulfenator.github.io"
         }
     ],
     "require": {
         "php": ">=5.4.0",
-        "yiisoft/yii2": "~2.0.0"
+        "yiisoft/yii2": "^2"
     },
     "autoload": {
         "psr-4": {
@@ -27,6 +32,6 @@
     },
     "require-dev": {
         "codeception/codeception": "*",
-        "yiisoft/yii2-codeception": "~2.0"
+        "yiisoft/yii2-codeception": "^2"
     }
 }
