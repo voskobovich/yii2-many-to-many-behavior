@@ -4,6 +4,7 @@ namespace voskobovich\behaviors;
 
 use Yii;
 use yii\base\Behavior;
+use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 use yii\base\ErrorException;
 use yii\db\Exception;
@@ -69,7 +70,7 @@ class ManyToManyBehavior extends Behavior
                 $this->_fields[$attributeName]['set'] = $params['set'];
             }
 
-            //add secondary fields
+            // Add secondary fields
             if (isset($params['fields'])) {
                 foreach ($params['fields'] as $fieldName => $adjustments) {
                     $fullFieldName = $attributeName.'_'.$fieldName;
@@ -93,24 +94,19 @@ class ManyToManyBehavior extends Behavior
 
     /**
      * Save all dirty (changed) relation values ($this->_values) to the database
-     * @param $event
      * @throws ErrorException
      * @throws Exception
      */
-    public function saveRelations($event)
+    public function saveRelations()
     {
-        /**
-         * @var $primaryModel \yii\db\ActiveRecord
-         */
+        /** @var ActiveRecord $primaryModel */
         $primaryModel = $this->owner;
 
         if (is_array($primaryModelPk = $primaryModel->getPrimaryKey())) {
-            throw new ErrorException("This behavior does not support composite primary keys");
+            throw new ErrorException('This behavior does not support composite primary keys');
         }
 
-        // Save relations data
         foreach ($this->relations as $attributeName => $params) {
-
             $relationName = $this->getRelationName($attributeName);
             $relation = $primaryModel->getRelation($relationName);
 
@@ -118,113 +114,142 @@ class ManyToManyBehavior extends Behavior
                 continue;
             }
 
-            $newValue = $this->getNewValue($attributeName);
-
-            $bindingKeys = $newValue;
-
-            // many-to-many
             if (!empty($relation->via) && $relation->multiple) {
-                //Assuming junction column is visible from the primary model connection
-                if (is_array($relation->via)) {
-                    //via()
-                    $via = $relation->via[1];
-                    $junctionModelClass = $via->modelClass;
-                    $junctionTable = $junctionModelClass::tableName();
-                    list($junctionColumn) = array_keys($via->link);
-                } else {
-                    //viaTable()
-                    list($junctionTable) = array_values($relation->via->from);
-                    list($junctionColumn) = array_keys($relation->via->link);
-                }
-                list($relatedColumn) = array_values($relation->link);
-
-                $connection = $primaryModel::getDb();
-                $transaction = $connection->beginTransaction();
-                try {
-                    // Remove old relations
-                    $connection->createCommand()
-                        ->delete($junctionTable, ArrayHelper::merge(
-                            [$junctionColumn => $primaryModelPk],
-                            $this->getCustomDeleteCondition($attributeName)
-                        ))
-                        ->execute();
-
-                    // Write new relations
-                    if (!empty($bindingKeys)) {
-                        $junctionRows = [];
-
-                        $viaTableParams = $this->getViaTableParams($attributeName);
-
-                        foreach ($bindingKeys as $relatedPk) {
-                            $row = [$primaryModelPk, $relatedPk];
-
-                            // calculate additional viaTable values
-                            foreach (array_keys($viaTableParams) as $viaTableColumn) {
-                                $row[] = $this->getViaTableValue($attributeName, $viaTableColumn, $relatedPk);
-                            }
-
-                            array_push($junctionRows, $row);
-                        }
-
-                        $cols = [$junctionColumn, $relatedColumn];
-
-                        // additional viaTable columns
-                        foreach (array_keys($viaTableParams) as $viaTableColumn) {
-                            $cols[] = $viaTableColumn;
-                        }
-
-                        $connection->createCommand()
-                            ->batchInsert($junctionTable, $cols, $junctionRows)
-                            ->execute();
-                    }
-                    $transaction->commit();
-                } catch (Exception $ex) {
-                    $transaction->rollback();
-                    throw $ex;
-                }
-
-                // one-to-many on the many side
+                // Many-to-many
+                $this->saveManyToManyRelation($relation, $attributeName);
             } elseif (!empty($relation->link) && $relation->multiple) {
-
-                //HasMany, primary model HAS MANY foreign models, must update foreign model table
-                $foreignModel = new $relation->modelClass();
-                $manyTable = $foreignModel->tableName();
-                list($manyTableFkColumn) = array_keys($relation->link);
-                $manyTableFkValue = $primaryModelPk;
-                list($manyTablePkColumn) = ($foreignModel->primaryKey());
-
-                $connection = $foreignModel::getDb();
-                $transaction = $connection->beginTransaction();
-
-                $defaultValue = $this->getDefaultValue($attributeName);
-
-                try {
-                    // Remove old relations
-                    $connection->createCommand()
-                        ->update(
-                            $manyTable,
-                            [$manyTableFkColumn => $defaultValue],
-                            [$manyTableFkColumn => $manyTableFkValue])
-                        ->execute();
-
-                    // Write new relations
-                    if (!empty($bindingKeys)) {
-                        $connection->createCommand()
-                            ->update(
-                                $manyTable,
-                                [$manyTableFkColumn => $manyTableFkValue],
-                                ['in', $manyTablePkColumn, $bindingKeys])
-                            ->execute();
-                    }
-                    $transaction->commit();
-                } catch (Exception $ex) {
-                    $transaction->rollback();
-                    throw $ex;
-                }
-
+                // One-to-many on the many side
+                $this->saveOneToManyRelation($relation, $attributeName);
             } else {
                 throw new ErrorException('Relationship type not supported.');
             }
+        }
+    }
+
+    /**
+     * @param ActiveQuery $relation
+     * @param string $attributeName
+     * @throws Exception
+     */
+    private function saveManyToManyRelation($relation, $attributeName)
+    {
+        /** @var ActiveRecord $primaryModel */
+        $primaryModel = $this->owner;
+        $primaryModelPk = $primaryModel->getPrimaryKey();
+
+        $bindingKeys = $this->getNewValue($attributeName);
+
+        // Assuming junction column is visible from the primary model connection
+        if (is_array($relation->via)) {
+            // via()
+            $via = $relation->via[1];
+            /** @var ActiveRecord $junctionModelClass */
+            $junctionModelClass = $via->modelClass;
+            $junctionTable = $junctionModelClass::tableName();
+            list($junctionColumn) = array_keys($via->link);
+        } else {
+            // viaTable()
+            list($junctionTable) = array_values($relation->via->from);
+            list($junctionColumn) = array_keys($relation->via->link);
+        }
+
+        list($relatedColumn) = array_values($relation->link);
+
+        $connection = $primaryModel::getDb();
+        $transaction = $connection->beginTransaction();
+        try {
+            // Remove old relations
+            $connection->createCommand()
+                ->delete($junctionTable, ArrayHelper::merge(
+                    [$junctionColumn => $primaryModelPk],
+                    $this->getCustomDeleteCondition($attributeName)
+                ))
+                ->execute();
+
+            // Write new relations
+            if (!empty($bindingKeys)) {
+                $junctionRows = [];
+
+                $viaTableParams = $this->getViaTableParams($attributeName);
+
+                foreach ($bindingKeys as $relatedPk) {
+                    $row = [$primaryModelPk, $relatedPk];
+
+                    // Calculate additional viaTable values
+                    foreach (array_keys($viaTableParams) as $viaTableColumn) {
+                        $row[] = $this->getViaTableValue($attributeName, $viaTableColumn, $relatedPk);
+                    }
+
+                    array_push($junctionRows, $row);
+                }
+
+                $cols = [$junctionColumn, $relatedColumn];
+
+                // Additional viaTable columns
+                foreach (array_keys($viaTableParams) as $viaTableColumn) {
+                    $cols[] = $viaTableColumn;
+                }
+
+                $connection->createCommand()
+                    ->batchInsert($junctionTable, $cols, $junctionRows)
+                    ->execute();
+            }
+            $transaction->commit();
+        } catch (Exception $ex) {
+            $transaction->rollback();
+            throw $ex;
+        }
+    }
+
+    /**
+     * @param ActiveQuery $relation
+     * @param string $attributeName
+     * @throws Exception
+     */
+    private function saveOneToManyRelation($relation, $attributeName)
+    {
+        /** @var ActiveRecord $primaryModel */
+        $primaryModel = $this->owner;
+        $primaryModelPk = $primaryModel->getPrimaryKey();
+
+        $bindingKeys = $this->getNewValue($attributeName);
+
+        // HasMany, primary model HAS MANY foreign models, must update foreign model table
+        /** @var ActiveRecord $foreignModel */
+        $foreignModel = new $relation->modelClass();
+        $manyTable = $foreignModel->tableName();
+
+        list($manyTableFkColumn) = array_keys($relation->link);
+        $manyTableFkValue = $primaryModelPk;
+        list($manyTablePkColumn) = ($foreignModel->primaryKey());
+
+        $connection = $foreignModel::getDb();
+        $transaction = $connection->beginTransaction();
+
+        $defaultValue = $this->getDefaultValue($attributeName);
+
+        try {
+            // Remove old relations
+            $connection->createCommand()
+                ->update(
+                    $manyTable,
+                    [$manyTableFkColumn => $defaultValue],
+                    [$manyTableFkColumn => $manyTableFkValue])
+                ->execute();
+
+            // Write new relations
+            if (!empty($bindingKeys)) {
+                $connection->createCommand()
+                    ->update(
+                        $manyTable,
+                        [$manyTableFkColumn => $manyTableFkValue],
+                        ['in', $manyTablePkColumn, $bindingKeys])
+                    ->execute();
+            }
+            $transaction->commit();
+        } catch (Exception $ex) {
+            $transaction->rollback();
+            throw $ex;
         }
     }
 
@@ -238,7 +263,7 @@ class ManyToManyBehavior extends Behavior
     private function callUserFunction($function, $value)
     {
         if (!is_array($function) && !$function instanceof \Closure) {
-            throw new ErrorException("This value is not a function");
+            throw new ErrorException('This value is not a function');
         }
 
         return call_user_func($function, $value);
@@ -272,15 +297,18 @@ class ManyToManyBehavior extends Behavior
     private function getDefaultValue($attributeName)
     {
         $relationParams = $this->getRelationParams($attributeName);
+
         if (!isset($relationParams['default'])) {
             return null;
-        } elseif ($relationParams['default'] instanceof \Closure) {
-            $function = $relationParams['default'];
-            $relationName = $this->getRelationName($attributeName);
-            return call_user_func($function, $this->owner, $relationName, $attributeName);
-        } else {
-            return $relationParams['default'];
         }
+
+        if ($relationParams['default'] instanceof \Closure) {
+            $closure = $relationParams['default'];
+            $relationName = $this->getRelationName($attributeName);
+            return call_user_func($closure, $this->owner, $relationName, $attributeName);
+        }
+
+        return $relationParams['default'];
     }
 
     /**
@@ -296,7 +324,9 @@ class ManyToManyBehavior extends Behavior
 
         if (!isset($viaTableParams[$viaTableAttribute])) {
             return null;
-        } elseif ($viaTableParams[$viaTableAttribute] instanceof \Closure) {
+        }
+
+        if ($viaTableParams[$viaTableAttribute] instanceof \Closure) {
             $closure = $viaTableParams[$viaTableAttribute];
             $relationName = $this->getRelationName($attributeName);
             return call_user_func($closure, $this->owner, $relationName, $attributeName, $relatedPk);
@@ -313,7 +343,9 @@ class ManyToManyBehavior extends Behavior
     private function getViaTableParams($attributeName)
     {
         $params = $this->getRelationParams($attributeName);
-        return isset($params['viaTableValues']) ? $params['viaTableValues'] : [];
+        return isset($params['viaTableValues'])
+            ? $params['viaTableValues']
+            : [];
     }
 
     /**
@@ -324,7 +356,10 @@ class ManyToManyBehavior extends Behavior
     private function getCustomDeleteCondition($attributeName)
     {
         $params = $this->getRelationParams($attributeName);
-        return isset($params['customDeleteCondition']) ? $params['customDeleteCondition'] : [];
+
+        return isset($params['customDeleteCondition'])
+            ? $params['customDeleteCondition']
+            : [];
     }
 
     /**
@@ -336,7 +371,7 @@ class ManyToManyBehavior extends Behavior
     private function getFieldParams($fieldName)
     {
         if (empty($this->_fields[$fieldName])) {
-            throw new ErrorException("Parameter \"{$fieldName}\" does not exist");
+            throw new ErrorException('Parameter "' . $fieldName . '" does not exist');
         }
 
         return $this->_fields[$fieldName];
@@ -351,7 +386,7 @@ class ManyToManyBehavior extends Behavior
     private function getRelationParams($attributeName)
     {
         if (empty($this->relations[$attributeName])) {
-            throw new ErrorException("Parameter \"{$attributeName}\" does not exist");
+            throw new ErrorException('Parameter "' . $attributeName . '" does not exist.');
         }
 
         return $this->relations[$attributeName];
@@ -368,7 +403,9 @@ class ManyToManyBehavior extends Behavior
 
         if (is_string($params)) {
             return $params;
-        } elseif (is_array($params) && !empty($params[0])) {
+        }
+
+        if (is_array($params) && !empty($params[0])) {
             return $params[0];
         }
 
@@ -376,15 +413,7 @@ class ManyToManyBehavior extends Behavior
     }
 
     /**
-     * Returns a value indicating whether a property can be read.
-     * We return true if it is one of our properties and pass the
-     * params on to the parent class otherwise.
-     * TODO: Make it honor $checkVars ??
-     *
-     * @param string $name the property name
-     * @param boolean $checkVars whether to treat member variables as properties
-     * @return boolean whether the property can be read
-     * @see canSetProperty()
+     * @inheritdoc
      */
     public function canGetProperty($name, $checkVars = true)
     {
@@ -393,60 +422,44 @@ class ManyToManyBehavior extends Behavior
     }
 
     /**
-     * Returns a value indicating whether a property can be set.
-     * We return true if it is one of our properties and pass the
-     * params on to the parent class otherwise.
-     * TODO: Make it honor $checkVars and $checkBehaviors ??
-     *
-     * @param string $name the property name
-     * @param boolean $checkVars whether to treat member variables as properties
-     * @param boolean $checkBehaviors whether to treat behaviors' properties as properties of this component
-     * @return boolean whether the property can be written
-     * @see canGetProperty()
+     * @inheritdoc
      */
-    public function canSetProperty($name, $checkVars = true, $checkBehaviors = true)
+    public function canSetProperty($name, $checkVars = true)
     {
         return array_key_exists($name, $this->_fields) ?
-            true : parent::canSetProperty($name, $checkVars, $checkBehaviors);
+            true : parent::canSetProperty($name, $checkVars = true);
     }
 
     /**
-     * Returns the value of an object property.
-     * Get it from our local temporary variable if we have it,
-     * get if from DB otherwise.
-     *
-     * @param string $name the property name
-     * @return mixed the property value
-     * @see __set()
+     * @inheritdoc
      */
     public function __get($name)
     {
         $fieldParams = $this->getFieldParams($name);
         $attributeName = $fieldParams['attribute'];
-
         $relationName = $this->getRelationName($attributeName);
 
         if ($this->hasNewValue($attributeName)) {
             $value = $this->getNewValue($attributeName);
         } else {
-            $relation = $this->owner->getRelation($relationName);
+            /** @var ActiveRecord $owner */
+            $owner = $this->owner;
+            $relation = $owner->getRelation($relationName);
+
+            /** @var ActiveRecord $foreignModel */
             $foreignModel = new $relation->modelClass();
             $value = $relation->select($foreignModel->getPrimaryKey())->column();
         }
 
         if (empty($fieldParams['get'])) {
             return $value;
-        } else {
-            return $this->callUserFunction($fieldParams['get'], $value);
         }
+
+        return $this->callUserFunction($fieldParams['get'], $value);
     }
 
     /**
-     * Sets the value of a component property. The data is passed
-     *
-     * @param string $name the property name or the event name
-     * @param mixed $value the property value
-     * @see __get()
+     * @inheritdoc
      */
     public function __set($name, $value)
     {
