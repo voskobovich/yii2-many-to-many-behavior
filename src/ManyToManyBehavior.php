@@ -127,6 +127,7 @@ class ManyToManyBehavior extends Behavior
     }
 
     /**
+     * Save many-to-many relation
      * @param ActiveQuery $relation
      * @param string $attributeName
      * @throws Exception
@@ -202,6 +203,7 @@ class ManyToManyBehavior extends Behavior
     }
 
     /**
+     * Save one-to-many relation
      * @param ActiveQuery $relation
      * @param string $attributeName
      * @throws Exception
