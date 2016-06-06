@@ -73,7 +73,7 @@ class ManyToManyBehavior extends Behavior
             // Add secondary fields
             if (isset($params['fields'])) {
                 foreach ($params['fields'] as $fieldName => $adjustments) {
-                    $fullFieldName = $attributeName.'_'.$fieldName;
+                    $fullFieldName = $attributeName . '_' . $fieldName;
                     if (isset($this->_fields[$fullFieldName])) {
                         throw new ErrorException("Ambiguous field name definition: {$fullFieldName}");
                     }
@@ -95,7 +95,6 @@ class ManyToManyBehavior extends Behavior
     /**
      * Save all dirty (changed) relation values ($this->_values) to the database
      * @throws ErrorException
-     * @throws Exception
      */
     public function saveRelations()
     {
@@ -127,10 +126,10 @@ class ManyToManyBehavior extends Behavior
     }
 
     /**
-     * Save many-to-many relation
      * @param ActiveQuery $relation
      * @param string $attributeName
      * @throws Exception
+     * @throws \yii\db\Exception
      */
     private function saveManyToManyRelation($relation, $attributeName)
     {
@@ -146,11 +145,11 @@ class ManyToManyBehavior extends Behavior
             $via = $relation->via[1];
             /** @var ActiveRecord $junctionModelClass */
             $junctionModelClass = $via->modelClass;
-            $junctionTable = $junctionModelClass::tableName();
+            $viaTableName = $junctionModelClass::tableName();
             list($junctionColumn) = array_keys($via->link);
         } else {
             // viaTable()
-            list($junctionTable) = array_values($relation->via->from);
+            list($viaTableName) = array_values($relation->via->from);
             list($junctionColumn) = array_keys($relation->via->link);
         }
 
@@ -159,51 +158,102 @@ class ManyToManyBehavior extends Behavior
         $connection = $primaryModel::getDb();
         $transaction = $connection->beginTransaction();
         try {
-            // Remove old relations
-            $connection->createCommand()
-                ->delete($junctionTable, ArrayHelper::merge(
+            // Load current rows
+            $currentRows = $primaryModel::find()
+                ->from($viaTableName)
+                ->where(ArrayHelper::merge(
                     [$junctionColumn => $primaryModelPk],
                     $this->getCustomDeleteCondition($attributeName)
                 ))
-                ->execute();
+                ->indexBy($relatedColumn)
+                ->asArray()
+                ->all();
 
-            // Write new relations
+            $currentKeys = array_map(function ($item) use ($relatedColumn) {
+                return $item[$relatedColumn];
+            }, $currentRows);
+
             if (!empty($bindingKeys)) {
-                $junctionRows = [];
+                // Find removed relations
+                $removedKeys = array_diff($currentKeys, $bindingKeys);
+                // Find new relations
+                $addedKeys = array_diff($bindingKeys, $currentKeys);
+                // Find untouched relations
+                $untouchedKeys = array_diff($currentKeys, $removedKeys, $addedKeys);
 
                 $viaTableParams = $this->getViaTableParams($attributeName);
+                $viaTableColumns = array_keys($viaTableParams);
 
-                foreach ($bindingKeys as $relatedPk) {
-                    $row = [$primaryModelPk, $relatedPk];
+                $junctionColumns = [$junctionColumn, $relatedColumn];
+                foreach ($viaTableColumns as $viaTableColumn) {
+                    $junctionColumns[] = $viaTableColumn;
+                }
 
-                    // Calculate additional viaTable values
-                    foreach (array_keys($viaTableParams) as $viaTableColumn) {
-                        $row[] = $this->getViaTableValue($attributeName, $viaTableColumn, $relatedPk);
+                // Write new relations
+                if (!empty($addedKeys)) {
+                    $junctionRows = [];
+                    foreach ($addedKeys as $addedKey) {
+                        $row = [$primaryModelPk, $addedKey];
+
+                        // Calculate additional viaTable values
+                        foreach ($viaTableColumns as $viaTableColumn) {
+                            $row[] = $this->getViaTableValue($attributeName, $viaTableColumn, $addedKey);
+                        }
+
+                        array_push($junctionRows, $row);
                     }
 
-                    array_push($junctionRows, $row);
+                    $connection->createCommand()
+                        ->batchInsert($viaTableName, $junctionColumns, $junctionRows)
+                        ->execute();
                 }
 
-                $cols = [$junctionColumn, $relatedColumn];
+                // Processing untouched relations
+                if (!empty($untouchedKeys) && !empty($viaTableColumns)) {
+                    foreach ($untouchedKeys as $untouchedKey) {
+                        // Calculate additional viaTable values
+                        $row = [];
+                        foreach ($viaTableColumns as $viaTableColumn) {
+                            $row[$viaTableColumn] = $this->getViaTableValue($attributeName, $viaTableColumn,
+                                $untouchedKey, false);
+                        }
 
-                // Additional viaTable columns
-                foreach (array_keys($viaTableParams) as $viaTableColumn) {
-                    $cols[] = $viaTableColumn;
+                        $currentRow = (array)$currentRows[$untouchedKey];
+                        unset($currentRow[$junctionColumn]);
+                        unset($currentRow[$relatedColumn]);
+
+                        if (array_diff_assoc($currentRow, $row)) {
+                            $connection->createCommand()
+                                ->update($viaTableName, $row, [
+                                    $junctionColumn => $primaryModelPk,
+                                    $relatedColumn => $untouchedKey
+                                ])
+                                ->execute();
+                        }
+                    }
                 }
+            } else {
+                $removedKeys = $currentKeys;
+            }
 
+            if (!empty($removedKeys)) {
                 $connection->createCommand()
-                    ->batchInsert($junctionTable, $cols, $junctionRows)
+                    ->delete($viaTableName, ArrayHelper::merge(
+                        [$junctionColumn => $primaryModelPk],
+                        [$relatedColumn => $removedKeys],
+                        $this->getCustomDeleteCondition($attributeName)
+                    ))
                     ->execute();
             }
+
             $transaction->commit();
         } catch (Exception $ex) {
-            $transaction->rollback();
+            $transaction->rollBack();
             throw $ex;
         }
     }
 
     /**
-     * Save one-to-many relation
      * @param ActiveQuery $relation
      * @param string $attributeName
      * @throws Exception
@@ -218,7 +268,7 @@ class ManyToManyBehavior extends Behavior
 
         // HasMany, primary model HAS MANY foreign models, must update foreign model table
         /** @var ActiveRecord $foreignModel */
-        $foreignModel = new $relation->modelClass();
+        $foreignModel = Yii::createObject($relation->modelClass);
         $manyTable = $foreignModel->tableName();
 
         list($manyTableFkColumn) = array_keys($relation->link);
@@ -250,7 +300,7 @@ class ManyToManyBehavior extends Behavior
             }
             $transaction->commit();
         } catch (Exception $ex) {
-            $transaction->rollback();
+            $transaction->rollBack();
             throw $ex;
         }
     }
@@ -264,7 +314,7 @@ class ManyToManyBehavior extends Behavior
      */
     private function callUserFunction($function, $value)
     {
-        if (!is_array($function) && !$function instanceof \Closure) {
+        if (!is_array($function) && !is_callable($function)) {
             throw new ErrorException('This value is not a function');
         }
 
@@ -304,7 +354,7 @@ class ManyToManyBehavior extends Behavior
             return null;
         }
 
-        if ($relationParams['default'] instanceof \Closure) {
+        if (is_callable($relationParams['default'])) {
             $closure = $relationParams['default'];
             $relationName = $this->getRelationName($attributeName);
             return call_user_func($closure, $this->owner, $relationName, $attributeName);
@@ -318,9 +368,10 @@ class ManyToManyBehavior extends Behavior
      * @param string $attributeName
      * @param string $viaTableAttribute
      * @param integer $relatedPk
+     * @param bool $isNewRecord
      * @return mixed
      */
-    private function getViaTableValue($attributeName, $viaTableAttribute, $relatedPk)
+    private function getViaTableValue($attributeName, $viaTableAttribute, $relatedPk, $isNewRecord = true)
     {
         $viaTableParams = $this->getViaTableParams($attributeName);
 
@@ -328,10 +379,10 @@ class ManyToManyBehavior extends Behavior
             return null;
         }
 
-        if ($viaTableParams[$viaTableAttribute] instanceof \Closure) {
+        if (is_callable($viaTableParams[$viaTableAttribute])) {
             $closure = $viaTableParams[$viaTableAttribute];
             $relationName = $this->getRelationName($attributeName);
-            return call_user_func($closure, $this->owner, $relationName, $attributeName, $relatedPk);
+            return call_user_func($closure, $this->owner, $relationName, $attributeName, $relatedPk, $isNewRecord);
         }
 
         return $viaTableParams[$viaTableAttribute];
@@ -449,7 +500,7 @@ class ManyToManyBehavior extends Behavior
             $relation = $owner->getRelation($relationName);
 
             /** @var ActiveRecord $foreignModel */
-            $foreignModel = new $relation->modelClass();
+            $foreignModel = Yii::createObject($relation->modelClass);
             $value = $relation->select($foreignModel->getPrimaryKey())->column();
         }
 
