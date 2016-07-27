@@ -2,27 +2,29 @@
 
 namespace data;
 
-use Yii;
+use voskobovich\manytomany\ManyToManyBehavior;
 use yii\helpers\Json;
 
+/**
+ * Class BookJsonFields
+ * @package data
+ */
 class BookJsonFields extends Book
 {
-
     public function behaviors()
     {
-    return
-        [
+        return [
             [
-                'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
+                'class' => ManyToManyBehavior::className(),
                 'relations' => [
                     'author_list' => [
                         'authors',
                         'fields' => [
                             'json' => [
-                                'get' => function($value) {
+                                'get' => function ($value) {
                                     return Json::encode($value);
                                 },
-                                'set' => function($value) {
+                                'set' => function ($value) {
                                     return Json::decode($value);
                                 },
                             ],
@@ -32,18 +34,18 @@ class BookJsonFields extends Book
                         'reviews',
                         'fields' => [
                             'json' => [
-                                'get' => function($value) {
+                                'get' => function ($value) {
                                     return Json::encode($value);
                                 },
-                                'set' => function($value) {
+                                'set' => function ($value) {
                                     return Json::decode($value);
                                 },
                             ],
                             'implode' => [
-                                'get' => function($value) {
+                                'get' => function ($value) {
                                     return implode(',', $value);
                                 },
-                                'set' => function($value) {
+                                'set' => function ($value) {
                                     return explode(',', $value);
                                 },
                             ],
@@ -53,5 +55,4 @@ class BookJsonFields extends Book
             ],
         ];
     }
-
 }

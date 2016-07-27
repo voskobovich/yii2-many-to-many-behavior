@@ -2,7 +2,7 @@
 
 namespace data;
 
-use Yii;
+use voskobovich\manytomany\ManyToManyBehavior;
 
 /**
  * This is the model class for table "book".
@@ -49,7 +49,7 @@ class Book extends \yii\db\ActiveRecord
     public function getAuthors()
     {
         return $this->hasMany(Author::className(), ['id' => 'book_id'])
-                    ->viaTable('book_has_author', ['author_id' => 'id']);
+            ->viaTable('book_has_author', ['author_id' => 'id']);
     }
 
     public function getReviews()
@@ -59,10 +59,9 @@ class Book extends \yii\db\ActiveRecord
 
     public function behaviors()
     {
-    return
-        [
+        return [
             [
-                'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
+                'class' => ManyToManyBehavior::className(),
                 'relations' => [
                     'author_list' => ['authors'],
                     'review_list' => ['reviews'],

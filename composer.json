@@ -27,7 +27,9 @@
     },
     "autoload": {
         "psr-4": {
-            "voskobovich\\behaviors\\": "src"
+            "voskobovich\\manytomany\\": "src",
+            "voskobovich\\manytomany\\interfaces\\": "src/interfaces",
+            "voskobovich\\manytomany\\updaters\\": "src/updaters"
         }
     },
     "require-dev": {

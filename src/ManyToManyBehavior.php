@@ -1,22 +1,25 @@
 <?php
 
-namespace voskobovich\behaviors;
+namespace voskobovich\manytomany;
 
+use voskobovich\manytomany\interfaces\ManyToManyBehaviorInterface;
+use voskobovich\manytomany\interfaces\ManyToManyUpdaterInterface;
+use voskobovich\manytomany\interfaces\OneToManyUpdaterInterface;
+use voskobovich\manytomany\updaters\ManyToManyUpdater;
+use voskobovich\manytomany\updaters\OneToManyUpdater;
 use Yii;
 use yii\base\Behavior;
-use yii\db\ActiveQuery;
+use yii\base\InvalidConfigException;
 use yii\db\ActiveRecord;
 use yii\base\ErrorException;
-use yii\db\Exception;
-use yii\helpers\ArrayHelper;
 
 /**
  * Class ManyToManyBehavior
- * @package voskobovich\behaviors
+ * @package voskobovich\manytomany
  *
  * See README.md for examples
  */
-class ManyToManyBehavior extends Behavior
+class ManyToManyBehavior extends Behavior implements ManyToManyBehaviorInterface
 {
     /**
      * Stores a list of relations, affected by the behavior. Configurable property.
@@ -115,193 +118,31 @@ class ManyToManyBehavior extends Behavior
 
             if (!empty($relation->via) && $relation->multiple) {
                 // Many-to-many
-                $this->saveManyToManyRelation($relation, $attributeName);
+                if (!empty($params['updaterClass'])) {
+                    $updater = Yii::createObject($params['updaterClass']);
+                    if (!$updater instanceof ManyToManyUpdaterInterface) {
+                        throw new InvalidConfigException('The object passed to "updaterClass" must implement the interface "voskobovich\manytomany\interfaces\ManyToManyUpdaterInterface"');
+                    }
+                } else {
+                    $updater = new ManyToManyUpdater();
+                }
+                $updater->setBehavior($this);
+                $updater->saveManyToManyRelation($relation, $attributeName);
             } elseif (!empty($relation->link) && $relation->multiple) {
                 // One-to-many on the many side
-                $this->saveOneToManyRelation($relation, $attributeName);
+                if (!empty($params['updaterClass'])) {
+                    $updater = Yii::createObject($params['updaterClass']);
+                    if (!$updater instanceof OneToManyUpdaterInterface) {
+                        throw new InvalidConfigException('The object passed to "updaterClass" must implement the interface "voskobovich\manytomany\interfaces\OneToManyUpdaterInterface"');
+                    }
+                } else {
+                    $updater = new OneToManyUpdater();
+                }
+                $updater->setBehavior($this);
+                $updater->saveOneToManyRelation($relation, $attributeName);
             } else {
                 throw new ErrorException('Relationship type not supported.');
             }
-        }
-    }
-
-    /**
-     * @param ActiveQuery $relation
-     * @param string $attributeName
-     * @throws Exception
-     * @throws \yii\db\Exception
-     */
-    private function saveManyToManyRelation($relation, $attributeName)
-    {
-        /** @var ActiveRecord $primaryModel */
-        $primaryModel = $this->owner;
-        $primaryModelPk = $primaryModel->getPrimaryKey();
-
-        $bindingKeys = $this->getNewValue($attributeName);
-
-        // Assuming junction column is visible from the primary model connection
-        if (is_array($relation->via)) {
-            // via()
-            $via = $relation->via[1];
-            /** @var ActiveRecord $junctionModelClass */
-            $junctionModelClass = $via->modelClass;
-            $viaTableName = $junctionModelClass::tableName();
-            list($junctionColumn) = array_keys($via->link);
-        } else {
-            // viaTable()
-            list($viaTableName) = array_values($relation->via->from);
-            list($junctionColumn) = array_keys($relation->via->link);
-        }
-
-        list($relatedColumn) = array_values($relation->link);
-
-        $connection = $primaryModel::getDb();
-        $transaction = $connection->beginTransaction();
-        try {
-            // Load current rows
-            $currentRows = $primaryModel::find()
-                ->from($viaTableName)
-                ->where(ArrayHelper::merge(
-                    [$junctionColumn => $primaryModelPk],
-                    $this->getCustomDeleteCondition($attributeName)
-                ))
-                ->indexBy($relatedColumn)
-                ->asArray()
-                ->all();
-
-            $currentKeys = array_map(function ($item) use ($relatedColumn) {
-                return $item[$relatedColumn];
-            }, $currentRows);
-
-            if (!empty($bindingKeys)) {
-                // Find removed relations
-                $removedKeys = array_diff($currentKeys, $bindingKeys);
-                // Find new relations
-                $addedKeys = array_diff($bindingKeys, $currentKeys);
-                // Find untouched relations
-                $untouchedKeys = array_diff($currentKeys, $removedKeys, $addedKeys);
-
-                $viaTableParams = $this->getViaTableParams($attributeName);
-                $viaTableColumns = array_keys($viaTableParams);
-
-                $junctionColumns = [$junctionColumn, $relatedColumn];
-                foreach ($viaTableColumns as $viaTableColumn) {
-                    $junctionColumns[] = $viaTableColumn;
-                }
-
-                // Write new relations
-                if (!empty($addedKeys)) {
-                    $junctionRows = [];
-                    foreach ($addedKeys as $addedKey) {
-                        $row = [$primaryModelPk, $addedKey];
-
-                        // Calculate additional viaTable values
-                        foreach ($viaTableColumns as $viaTableColumn) {
-                            $row[] = $this->getViaTableValue($attributeName, $viaTableColumn, $addedKey);
-                        }
-
-                        array_push($junctionRows, $row);
-                    }
-
-                    $connection->createCommand()
-                        ->batchInsert($viaTableName, $junctionColumns, $junctionRows)
-                        ->execute();
-                }
-
-                // Processing untouched relations
-                if (!empty($untouchedKeys) && !empty($viaTableColumns)) {
-                    foreach ($untouchedKeys as $untouchedKey) {
-                        // Calculate additional viaTable values
-                        $row = [];
-                        foreach ($viaTableColumns as $viaTableColumn) {
-                            $row[$viaTableColumn] = $this->getViaTableValue($attributeName, $viaTableColumn,
-                                $untouchedKey, false);
-                        }
-
-                        $currentRow = (array)$currentRows[$untouchedKey];
-                        unset($currentRow[$junctionColumn]);
-                        unset($currentRow[$relatedColumn]);
-
-                        if (array_diff_assoc($currentRow, $row)) {
-                            $connection->createCommand()
-                                ->update($viaTableName, $row, [
-                                    $junctionColumn => $primaryModelPk,
-                                    $relatedColumn => $untouchedKey
-                                ])
-                                ->execute();
-                        }
-                    }
-                }
-            } else {
-                $removedKeys = $currentKeys;
-            }
-
-            if (!empty($removedKeys)) {
-                $connection->createCommand()
-                    ->delete($viaTableName, ArrayHelper::merge(
-                        [$junctionColumn => $primaryModelPk],
-                        [$relatedColumn => $removedKeys],
-                        $this->getCustomDeleteCondition($attributeName)
-                    ))
-                    ->execute();
-            }
-
-            $transaction->commit();
-        } catch (Exception $ex) {
-            $transaction->rollBack();
-            throw $ex;
-        }
-    }
-
-    /**
-     * @param ActiveQuery $relation
-     * @param string $attributeName
-     * @throws Exception
-     */
-    private function saveOneToManyRelation($relation, $attributeName)
-    {
-        /** @var ActiveRecord $primaryModel */
-        $primaryModel = $this->owner;
-        $primaryModelPk = $primaryModel->getPrimaryKey();
-
-        $bindingKeys = $this->getNewValue($attributeName);
-
-        // HasMany, primary model HAS MANY foreign models, must update foreign model table
-        /** @var ActiveRecord $foreignModel */
-        $foreignModel = Yii::createObject($relation->modelClass);
-        $manyTable = $foreignModel->tableName();
-
-        list($manyTableFkColumn) = array_keys($relation->link);
-        $manyTableFkValue = $primaryModelPk;
-        list($manyTablePkColumn) = ($foreignModel->primaryKey());
-
-        $connection = $foreignModel::getDb();
-        $transaction = $connection->beginTransaction();
-
-        $defaultValue = $this->getDefaultValue($attributeName);
-
-        try {
-            // Remove old relations
-            $connection->createCommand()
-                ->update(
-                    $manyTable,
-                    [$manyTableFkColumn => $defaultValue],
-                    [$manyTableFkColumn => $manyTableFkValue])
-                ->execute();
-
-            // Write new relations
-            if (!empty($bindingKeys)) {
-                $connection->createCommand()
-                    ->update(
-                        $manyTable,
-                        [$manyTableFkColumn => $manyTableFkValue],
-                        ['in', $manyTablePkColumn, $bindingKeys])
-                    ->execute();
-            }
-            $transaction->commit();
-        } catch (Exception $ex) {
-            $transaction->rollBack();
-            throw $ex;
         }
     }
 
@@ -312,7 +153,7 @@ class ManyToManyBehavior extends Behavior
      * @return mixed
      * @throws ErrorException
      */
-    private function callUserFunction($function, $value)
+    public function callUserFunction($function, $value)
     {
         if (!is_array($function) && !is_callable($function)) {
             throw new ErrorException('This value is not a function');
@@ -326,7 +167,7 @@ class ManyToManyBehavior extends Behavior
      * @param string $attributeName
      * @return null
      */
-    private function hasNewValue($attributeName)
+    public function hasNewValue($attributeName)
     {
         return isset($this->_values[$attributeName]);
     }
@@ -336,7 +177,7 @@ class ManyToManyBehavior extends Behavior
      * @param string $attributeName
      * @return null
      */
-    private function getNewValue($attributeName)
+    public function getNewValue($attributeName)
     {
         return $this->_values[$attributeName];
     }
@@ -346,7 +187,7 @@ class ManyToManyBehavior extends Behavior
      * @param string $attributeName
      * @return mixed
      */
-    private function getDefaultValue($attributeName)
+    public function getDefaultValue($attributeName)
     {
         $relationParams = $this->getRelationParams($attributeName);
 
@@ -371,7 +212,7 @@ class ManyToManyBehavior extends Behavior
      * @param bool $isNewRecord
      * @return mixed
      */
-    private function getViaTableValue($attributeName, $viaTableAttribute, $relatedPk, $isNewRecord = true)
+    public function getViaTableValue($attributeName, $viaTableAttribute, $relatedPk, $isNewRecord = true)
     {
         $viaTableParams = $this->getViaTableParams($attributeName);
 
@@ -393,7 +234,7 @@ class ManyToManyBehavior extends Behavior
      * @param string $attributeName
      * @return array
      */
-    private function getViaTableParams($attributeName)
+    public function getViaTableParams($attributeName)
     {
         $params = $this->getRelationParams($attributeName);
         return isset($params['viaTableValues'])
@@ -406,7 +247,7 @@ class ManyToManyBehavior extends Behavior
      * @param string $attributeName
      * @return array
      */
-    private function getCustomDeleteCondition($attributeName)
+    public function getCustomDeleteCondition($attributeName)
     {
         $params = $this->getRelationParams($attributeName);
 
@@ -421,7 +262,7 @@ class ManyToManyBehavior extends Behavior
      * @return mixed
      * @throws ErrorException
      */
-    private function getFieldParams($fieldName)
+    public function getFieldParams($fieldName)
     {
         if (empty($this->_fields[$fieldName])) {
             throw new ErrorException('Parameter "' . $fieldName . '" does not exist');
@@ -436,7 +277,7 @@ class ManyToManyBehavior extends Behavior
      * @return mixed
      * @throws ErrorException
      */
-    private function getRelationParams($attributeName)
+    public function getRelationParams($attributeName)
     {
         if (empty($this->relations[$attributeName])) {
             throw new ErrorException('Parameter "' . $attributeName . '" does not exist.');
@@ -450,7 +291,7 @@ class ManyToManyBehavior extends Behavior
      * @param string $attributeName
      * @return null
      */
-    private function getRelationName($attributeName)
+    public function getRelationName($attributeName)
     {
         $params = $this->getRelationParams($attributeName);
 

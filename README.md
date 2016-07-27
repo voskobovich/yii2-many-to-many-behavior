@@ -40,7 +40,7 @@ public function behaviors()
 {
     return [
         [
-            'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
+            'class' => \voskobovich\manytomany\ManyToManyBehavior::className(),
             'relations' => [
                 'author_ids' => 'authors',
 				'review_ids' => 'reviews',

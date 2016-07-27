@@ -2,6 +2,7 @@
 
 namespace data;
 
+use voskobovich\manytomany\ManyToManyBehavior;
 use Yii;
 
 class BookCustomDefaults extends Book
@@ -19,10 +20,9 @@ class BookCustomDefaults extends Book
 
     public function behaviors()
     {
-    return
-        [
+        return [
             [
-                'class' => \voskobovich\behaviors\ManyToManyBehavior::className(),
+                'class' => ManyToManyBehavior::className(),
                 'relations' => [
                     'review_list_none' => [
                         'reviews',
@@ -37,7 +37,7 @@ class BookCustomDefaults extends Book
                     ],
                     'review_list_closure' => [
                         'reviews',
-                        'default' => function($model, $relationName, $attributeName) {
+                        'default' => function ($model, $relationName, $attributeName) {
                             $db = Yii::$app->db;
 
                             //OR
