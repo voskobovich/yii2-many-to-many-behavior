@@ -6,7 +6,7 @@ This behavior makes it easy to maintain many-to-many and one-to-many relations i
 [![Latest Stable Version](https://poser.pugx.org/voskobovich/yii2-many-many-behavior/v/stable.svg)](https://packagist.org/packages/voskobovich/yii2-many-many-behavior)
 [![Latest Unstable Version](https://poser.pugx.org/voskobovich/yii2-many-many-behavior/v/unstable.svg)](https://packagist.org/packages/voskobovich/yii2-many-many-behavior)
 [![Total Downloads](https://poser.pugx.org/voskobovich/yii2-many-many-behavior/downloads.svg)](https://packagist.org/packages/voskobovich/yii2-many-many-behavior)
-[![Build Status](https://travis-ci.org/voskobovich/yii2-many-to-many-behavior.svg?branch=master)](https://travis-ci.org/voskobovich/yii2-many-many-behavior)
+[![Build Status](https://travis-ci.org/voskobovich/yii2-many-to-many-behavior.svg?branch=master)](https://travis-ci.org/voskobovich/yii2-many-to-many-behavior)
 
 Support
 ---
