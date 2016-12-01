@@ -1,5 +1,10 @@
 Yii2 ManyToMany Behavior
 ========================
+
+It is a soon **DEPRECATED**. See the new version [**Yii2 Linker Behavior**](https://github.com/voskobovich/yii2-linker-behavior).
+
+## About
+
 This behavior makes it easy to maintain many-to-many and one-to-many relations in your ActiveRecord models.
 
 [![License](https://poser.pugx.org/voskobovich/yii2-many-many-behavior/license.svg)](https://packagist.org/packages/voskobovich/yii2-many-many-behavior)
