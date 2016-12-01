@@ -1,7 +1,8 @@
 Yii2 ManyToMany Behavior
 ========================
 
-It is a soon **DEPRECATED**. See the new version [**Yii2 Linker Behavior**](https://github.com/voskobovich/yii2-linker-behavior).
+This behavior soon will be **DEPRECATED**.  
+See the new version [**Yii2 Linker Behavior**](https://github.com/voskobovich/yii2-linker-behavior).
 
 ## About
 
